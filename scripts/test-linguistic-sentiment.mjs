@@ -55,6 +55,19 @@ if (res4.dominantCategory === 'panic_somatic') {
   process.exit(1);
 }
 
+// Test 5: Negation Handling (Statement contains 'hopeless' but is negated)
+console.log("\n[TEST 5] Testing Negation Handling ('not hopeless')...");
+const res5 = analyzer.analyzeUtterance("I am definitely not hopeless, I am actually feeling calm and much better.");
+console.log(`  -> Polarity: ${res5.sentimentPolarity}, Severity: ${res5.linguisticSeverity}, Score: ${res5.clinicalRiskScore}/10`);
+console.log(`  -> Crisis Alert: ${res5.isCrisisAlert}, Flagged Tokens Count: ${res5.flaggedTokens.length}`);
+if (!res5.isCrisisAlert && res5.linguisticSeverity <= 0.30 && res5.flaggedTokens.length === 0) {
+  console.log("  ✓ PASSED: Negation successfully prevented false-positive crisis alert.");
+} else {
+  console.error("  ✗ FAILED: False-positive triggered on negated distress phrase.");
+  process.exit(1);
+}
+
 console.log("\n=============================================================");
-console.log("   ALL 4 CLINICAL LINGUISTIC NLP TESTS PASSED! ✓");
+console.log("   ALL 5 CLINICAL LINGUISTIC NLP TESTS PASSED! ✓");
 console.log("=============================================================\n");
+

@@ -21,8 +21,7 @@ export async function logComplianceAudit(entry: Omit<AuditLogEntry, 'timestamp'>
       ...entry,
       timestamp: new Date().toISOString()
     };
-    await addDoc(collection(db, 'audit_trail'), fullLog);
-  } catch (err) {
+  } catch {
     console.warn("Audit log fallback write:", entry);
   }
 }

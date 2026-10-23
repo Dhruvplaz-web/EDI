@@ -1,6 +1,6 @@
 import { 
-  collection, doc, getDoc, getDocs, setDoc, updateDoc, 
-  onSnapshot, query, orderBy, where, runTransaction 
+  collection, doc, getDoc, setDoc, updateDoc, 
+  onSnapshot, query, orderBy, runTransaction 
 } from "firebase/firestore";
 import { db } from "./client";
 import { PatientProfile, ClinicalIntake, SessionRecord } from "./schema";
@@ -346,8 +346,9 @@ class PatientService {
         this.fallbackCache.set(patientId, data);
         return data;
       }
-    } catch (err: any) {
-      console.warn(`[PatientService] Firestore fetch failed for ${patientId}, using benchmark fallback:`, err.message);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.warn(`[PatientService] Firestore fetch failed for ${patientId}, using benchmark fallback:`, errorMsg);
     }
     return this.fallbackCache.get(patientId) || null;
   }
@@ -420,8 +421,9 @@ class PatientService {
           status: "in_consultation"
         });
       });
-    } catch (err: any) {
-      console.warn(`[PatientService] Claim transaction fallback:`, err.message);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.warn(`[PatientService] Claim transaction fallback:`, errorMsg);
       // Update local cache
       const item = this.queueCache.find(i => i.id === intakeId || i.patientId === intakeId);
       if (item) {
@@ -439,8 +441,9 @@ class PatientService {
     try {
       const patientRef = doc(db, "patients", patientId);
       await updateDoc(patientRef, { status, updatedAt: Date.now() });
-    } catch (err: any) {
-      console.warn(`[PatientService] Update status fallback:`, err.message);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.warn(`[PatientService] Update status fallback:`, errorMsg);
       const patient = this.fallbackCache.get(patientId);
       if (patient) {
         patient.status = status;
@@ -456,8 +459,9 @@ class PatientService {
     try {
       const sessionRef = doc(db, "sessions", session.sessionId);
       await setDoc(sessionRef, session);
-    } catch (err: any) {
-      console.warn(`[PatientService] Save session fallback:`, err.message);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.warn(`[PatientService] Save session fallback:`, errorMsg);
     }
   }
 
@@ -472,8 +476,9 @@ class PatientService {
       try {
         await setDoc(doc(db, "patients", patient.id), patient);
         patientCount++;
-      } catch (err: any) {
-        console.warn(`Failed to seed patient ${patient.id}:`, err.message);
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        console.warn(`Failed to seed patient ${patient.id}:`, errorMsg);
       }
     }
 
@@ -481,8 +486,9 @@ class PatientService {
       try {
         await setDoc(doc(db, "intakes", intake.id), intake);
         intakeCount++;
-      } catch (err: any) {
-        console.warn(`Failed to seed intake ${intake.id}:`, err.message);
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        console.warn(`Failed to seed intake ${intake.id}:`, errorMsg);
       }
     }
 

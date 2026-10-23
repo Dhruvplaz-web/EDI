@@ -259,8 +259,10 @@ export function TriageBoardClient({ role, canWriteNotes }: { role: string | unde
       return () => unsubscribe();
     } catch (err) {
       console.warn("Firestore queue query fallback:", err);
-      setQueue(defaultQueueItems);
-      setLoading(false);
+      setTimeout(() => {
+        setQueue(defaultQueueItems);
+        setLoading(false);
+      }, 0);
     }
   }, []);
 

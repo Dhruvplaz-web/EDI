@@ -104,9 +104,26 @@ export class ClinicalLinguisticAnalyzer {
     let despairScore = 0;
     let panicScore = 0;
     let manicScore = 0;
+    let positiveCount = 0;
+
+    const NEGATIONS = ['not', "don't", 'no', 'never', 'hardly', 'barely', 'without', 'denies', 'stopped', 'none'];
+
+    const isNegated = (targetPhrase: string): boolean => {
+      const idx = lower.indexOf(targetPhrase);
+      if (idx === -1) return false;
+      const precedingText = lower.slice(Math.max(0, idx - 30), idx);
+      const precedingWords = precedingText.trim().split(/\s+/).slice(-3);
+      return precedingWords.some(w => NEGATIONS.includes(w.replace(/[^a-z']/g, '')));
+    };
 
     for (const [phrase, meta] of Object.entries(CRISIS_LEXICON)) {
       if (lower.includes(phrase)) {
+        // If the phrase is explicitly negated (e.g. "not hopeless", "no thoughts of dying"), do NOT flag as risk
+        if (isNegated(phrase)) {
+          positiveCount += 1;
+          continue;
+        }
+
         flaggedTokens.push({
           phrase,
           category: meta.category,
@@ -122,7 +139,6 @@ export class ClinicalLinguisticAnalyzer {
     }
 
     // Count positive affirmations
-    let positiveCount = 0;
     for (const pos of POSITIVE_LEXICON) {
       if (lower.includes(pos)) positiveCount++;
     }

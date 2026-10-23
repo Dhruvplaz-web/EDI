@@ -70,7 +70,7 @@ export function synthesizeSOAPNote(params: GenerateSOAPParams): GenerateSOAPResu
 
   const attentionSummary = `Multimodal attention distribution: Voice: ${(attentionWeights.acoustic * 100).toFixed(0)}%, Kinematics: ${(attentionWeights.visual * 100).toFixed(0)}%, Dialogue: ${(attentionWeights.linguistic * 100).toFixed(0)}%.`;
 
-  let subjectiveNarrative = `Patient ${patientName} presented for tele-psychiatric consultation regarding ${primaryDiagnosis}. Self-reported subjective anxiety rated at ${subjectiveScore}/10.`;
+  let subjectiveNarrative = `Patient ${patientName} (${patientId}) presented for tele-psychiatric consultation regarding ${primaryDiagnosis}. Self-reported subjective anxiety rated at ${subjectiveScore}/10.`;
   if (sessionTranscript && sessionTranscript.trim().length > 0) {
     subjectiveNarrative += ` Patient dialogue excerpt: "${sessionTranscript.slice(0, 300).trim()}..."`;
   }

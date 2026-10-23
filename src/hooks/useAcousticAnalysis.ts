@@ -33,13 +33,13 @@ export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAn
 
   useEffect(() => {
     if (!mediaStream) {
-      setIsAnalyzing(false);
+      setTimeout(() => setIsAnalyzing(false), 0);
       return;
     }
 
     const audioTracks = mediaStream.getAudioTracks();
     if (audioTracks.length === 0) {
-      setIsAnalyzing(false);
+      setTimeout(() => setIsAnalyzing(false), 0);
       return;
     }
 
@@ -47,7 +47,7 @@ export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAn
 
     const startAudioProcessing = async () => {
       try {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
         if (!AudioContextClass) return;
 
         const audioCtx = new AudioContextClass();
@@ -97,8 +97,8 @@ export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAn
         dummyGain.connect(audioCtx.destination);
 
         setIsAnalyzing(true);
-      } catch (err: any) {
-        console.warn("[useAcousticAnalysis] Audio initialization fallback:", err.message);
+      } catch (err: unknown) {
+        console.warn("[useAcousticAnalysis] Audio initialization fallback:", err instanceof Error ? err.message : String(err));
       }
     };
 

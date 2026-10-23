@@ -25,9 +25,35 @@ export interface LiveTranscriptionHook {
   addManualUtterance: (text: string, speaker?: 'patient' | 'clinician') => void;
 }
 
+interface SpeechRecognitionEventLike {
+  resultIndex: number;
+  results: {
+    length: number;
+    [index: number]: {
+      isFinal: boolean;
+      [index: number]: { transcript: string };
+    };
+  };
+}
+
+interface SpeechRecognitionInstance {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: (() => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
 export function useLiveTranscription(autoStart: boolean = true): LiveTranscriptionHook {
   const [isListening, setIsListening] = useState(false);
-  const [isSupported, setIsSupported] = useState(false);
+  const [isSupported] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+  });
   const [transcriptHistory, setTranscriptHistory] = useState<TranscriptEntry[]>([]);
   const [interimText, setInterimText] = useState('');
   const [speechVelocityWpm, setSpeechVelocityWpm] = useState(130);
@@ -35,7 +61,7 @@ export function useLiveTranscription(autoStart: boolean = true): LiveTranscripti
   const [crisisAlert, setCrisisAlert] = useState(false);
   const [latestAnalysis, setLatestAnalysis] = useState<LinguisticAnalysisResult | null>(null);
 
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const analyzerRef = useRef<ClinicalLinguisticAnalyzer>(new ClinicalLinguisticAnalyzer());
   const isManuallyStopped = useRef(false);
 
@@ -62,16 +88,17 @@ export function useLiveTranscription(autoStart: boolean = true): LiveTranscripti
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setIsSupported(false);
+    const windowWithSpeech = window as unknown as {
+      SpeechRecognition?: new () => SpeechRecognitionInstance;
+      webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
+    };
+    const SpeechRecognitionClass = windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition;
+    if (!SpeechRecognitionClass) {
       return;
     }
 
-    setIsSupported(true);
-
     try {
-      const recognition = new SpeechRecognition();
+      const recognition = new SpeechRecognitionClass();
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
@@ -81,7 +108,7 @@ export function useLiveTranscription(autoStart: boolean = true): LiveTranscripti
         setIsListening(true);
       };
 
-      recognition.onresult = (event: any) => {
+      recognition.onresult = (event: SpeechRecognitionEventLike) => {
         let interim = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const item = event.results[i];
@@ -95,7 +122,7 @@ export function useLiveTranscription(autoStart: boolean = true): LiveTranscripti
         setInterimText(interim);
       };
 
-      recognition.onerror = (event: any) => {
+      recognition.onerror = (event: { error: string }) => {
         if (event.error !== 'no-speech') {
           console.warn("[useLiveTranscription] SpeechRecognition notice:", event.error);
         }
@@ -116,8 +143,9 @@ export function useLiveTranscription(autoStart: boolean = true): LiveTranscripti
           recognition.start();
         } catch {}
       }
-    } catch (err: any) {
-      console.warn("[useLiveTranscription] Init error:", err.message);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Recognition error';
+      console.warn("[useLiveTranscription] Init error:", errorMsg);
     }
 
     return () => {

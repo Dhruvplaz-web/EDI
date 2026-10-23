@@ -20,6 +20,7 @@ import { AppointmentScheduler } from '@/components/patient/appointment-scheduler
 import { UserProfileSettings } from '@/components/profile/user-profile-settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export function PatientDashboardClient({ role, canViewPHR }: { role?: string; canViewPHR?: boolean }) {
   const [activeTab, setActiveTab] = useState('overview');
@@ -62,11 +63,11 @@ export function PatientDashboardClient({ role, canViewPHR }: { role?: string; ca
                   Connected to Dr. Sarah Jenkins (NPI-84920)
                 </CardDescription>
               </div>
-              <a href="/patient/consult/call-room-90412">
+              <Link href="/patient/consult/call-room-90412">
                 <Button className="bg-[#1E1B4B] hover:bg-[#2E2A72] text-white font-semibold text-xs py-2.5 shadow-md shadow-indigo-950/20">
                   Join HD Video Consultation Stream
                 </Button>
-              </a>
+              </Link>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -29,6 +29,7 @@ export function useWebRTC(callId: string | undefined, role: 'clinician' | 'patie
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const pc = useRef<RTCPeerConnection | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (!callId) return;
@@ -59,6 +60,7 @@ export function useWebRTC(callId: string | undefined, role: 'clinician' | 'patie
         });
 
         if (stream) {
+          localStreamRef.current = stream;
           setLocalStream(stream);
           const rStream = new MediaStream();
           setRemoteStream(rStream);
@@ -175,7 +177,7 @@ export function useWebRTC(callId: string | undefined, role: 'clinician' | 'patie
     return () => {
       if (unsubCallDoc) unsubCallDoc();
       if (unsubCandidates) unsubCandidates();
-      localStream?.getTracks().forEach(t => t.stop());
+      localStreamRef.current?.getTracks().forEach(t => t.stop());
       pc.current?.close();
     };
   }, [callId, role]);

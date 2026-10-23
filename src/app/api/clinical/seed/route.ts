@@ -9,9 +9,10 @@ export async function GET() {
       message: "Benchmark clinical data seeded successfully",
       details: result
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : "Failed to seed benchmark data";
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: errorMsg },
       { status: 500 }
     );
   }

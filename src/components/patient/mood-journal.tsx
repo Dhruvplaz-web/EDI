@@ -5,12 +5,22 @@ import { BookOpen, Calendar, Mic, MicOff, Square, Play, Activity, CheckCircle2, 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
+interface AcousticJournalAnalysis {
+  pitch: string;
+  pitchStatus: string;
+  jitter: string;
+  jitterStatus: string;
+  energy: string;
+  detectedMood: string;
+  risk: string;
+}
+
 export function MoodJournal() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [analysisResult, setAnalysisResult] = useState<AcousticJournalAnalysis | null>(null);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 

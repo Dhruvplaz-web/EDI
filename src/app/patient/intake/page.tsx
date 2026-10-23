@@ -184,7 +184,6 @@ export default function PatientIntakePage() {
                     <video
                       ref={(el) => {
                         if (el) {
-                          // @ts-ignore
                           videoRef.current = el;
                           if (streamRef.current && el.srcObject !== streamRef.current) {
                             el.srcObject = streamRef.current;
@@ -204,7 +203,7 @@ export default function PatientIntakePage() {
                   )}
 
                   <div className="relative z-10 w-full flex flex-col items-center">
-                    <p className="font-medium text-slate-700 dark:text-slate-300 mb-4 text-center">"How have you been feeling over the past 48 hours?"</p>
+                    <p className="font-medium text-slate-700 dark:text-slate-300 mb-4 text-center">&quot;How have you been feeling over the past 48 hours?&quot;</p>
 
                     {!formData.baselineSeverityScore ? (
                       <div className="w-full max-w-xs space-y-4">

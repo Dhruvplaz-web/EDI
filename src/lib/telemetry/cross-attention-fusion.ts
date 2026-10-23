@@ -152,7 +152,8 @@ export class CrossAttentionFusionEngine {
   }
 
   /**
-   * Executes the full Cross-Attention forward pass across the 3 modalities
+   * Executes true Scaled Dot-Product Cross-Attention forward pass across the 3 modalities:
+   * Z = Softmax(Q * K^T / sqrt(d)) * V
    */
   public fuse(
     visual: VisualInputs,
@@ -161,36 +162,57 @@ export class CrossAttentionFusionEngine {
     subjectiveSelfReportScore: number = 5.0,
     currentTimeMs: number = Date.now()
   ): CrossAttentionResult {
-    // 1. Generate normalized embeddings for each stream
+    // 1. Generate normalized embeddings for each stream [d = 4]
     const eVis = this.embedVisual(visual);
     const eAud = this.embedAcoustic(acoustic);
     const eTxt = this.embedLinguistic(linguistic);
 
-    // 2. Modality Sequence Matrix M = [eVis, eAud, eTxt]
+    // 2. Modality Sequence Matrix M = [eVis, eAud, eTxt] in R^(3x4)
     const M = [eVis, eAud, eTxt];
 
-    // 3. Project Query (Q), Key (K), Value (V) tensors
+    // 3. Project Query (Q), Key (K), Value (V) tensors into R^(3x4)
     const Q = M.map(v => this.matMul(v, this.W_Q));
     const K = M.map(v => this.matMul(v, this.W_K));
     const V = M.map(v => this.matMul(v, this.W_V));
 
-    // 4. Calculate Cross-Attention Matrix A = Softmax(Q * K^T / sqrt(d))
-    // We compute self-and-cross attention energy across the 3 modality rows
-    const attentionEnergy = [0, 0, 0];
+    // 4. Compute Pairwise Attention Energy S_ij = (Q_i . K_j) / sqrt(d)
+    const S: number[][] = [
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0]
+    ];
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
-        const score = this.dotProduct(Q[i], K[j]) / this.sqrtD;
-        attentionEnergy[j] += score;
+        S[i][j] = this.dotProduct(Q[i], K[j]) / this.sqrtD;
       }
     }
 
-    // Apply Softmax across key dimension to get attention weights W = [w_vis, w_aud, w_txt]
-    const rawWeights = this.softmax(attentionEnergy);
-    const wVis = parseFloat(rawWeights[0].toFixed(3));
-    const wAud = parseFloat(rawWeights[1].toFixed(3));
-    const wTxt = parseFloat(rawWeights[2].toFixed(3));
+    // 5. Compute Row-wise Softmax to obtain full Attention Map A in R^(3x3)
+    // where A[i][j] represents how strongly modality i queries modality j
+    const A: number[][] = S.map(row => this.softmax(row));
 
-    // 5. Calculate independent Modality Severity Scores in [1.0, 10.0]
+    // 6. Scaled Dot-Product Attended Value Tensor Z = A * V in R^(3x4)
+    // Z[i] is the cross-attended contextual representation of modality i
+    const Z: number[][] = [];
+    for (let i = 0; i < 3; i++) {
+      const zRow = [0, 0, 0, 0];
+      for (let d = 0; d < this.dModel; d++) {
+        let sum = 0;
+        for (let j = 0; j < 3; j++) {
+          sum += A[i][j] * V[j][d];
+        }
+        zRow[d] = sum;
+      }
+      Z.push(zRow);
+    }
+
+    // 7. Marginal Attention Weights: mean attention received by key modality j across queries
+    // Sum_j w_j = (1/3) * sum_j sum_i A_ij = (1/3) * 3 = 1.000 strictly guaranteed
+    const wVis = parseFloat(((A[0][0] + A[1][0] + A[2][0]) / 3.0).toFixed(3));
+    const wAud = parseFloat(((A[0][1] + A[1][1] + A[2][1]) / 3.0).toFixed(3));
+    const wTxt = parseFloat(((A[0][2] + A[1][2] + A[2][2]) / 3.0).toFixed(3));
+
+    // 8. Calculate independent Modality Severity Scores in [1.0, 10.0]
     const rawVisScore = 1.0 + 9.0 * Math.min(1.0, (0.6 * visual.au4BrowDown + 0.4 * visual.au15MouthFrown));
     const rawAudScore = acoustic.isFlatAffect 
       ? 8.0 
@@ -201,11 +223,14 @@ export class CrossAttentionFusionEngine {
     const sAud = parseFloat(rawAudScore.toFixed(1));
     const sTxt = parseFloat(rawTxtScore.toFixed(1));
 
-    // 6. Attention-Weighted Final Clinical Severity Score
-    const fusedSeverity = parseFloat((wVis * sVis + wAud * sAud + wTxt * sTxt).toFixed(1));
+    // 9. Attended Composite Clinical Severity Score
+    // Fuses attention weights w with cross-attended Z norm modulation
+    const zEnergyNorm = Math.min(1.0, (Math.hypot(...Z[0]) + Math.hypot(...Z[1]) + Math.hypot(...Z[2])) / 3.0);
+    const rawWeighted = (wVis * sVis + wAud * sAud + wTxt * sTxt);
+    const fusedSeverity = parseFloat(Math.min(10.0, Math.max(1.0, rawWeighted * (0.85 + 0.15 * zEnergyNorm))).toFixed(1));
 
-    // 7. Provable Cross-Modal Incongruence / Symptom Masking Metric D(t)
-    // Compares stated verbal subjective report (or text) against involuntary non-verbal biomarkers
+    // 10. Provable Cross-Modal Incongruence / Symptom Masking Metric D(t)
+    // Compares stated verbal subjective report against involuntary non-verbal autonomic biomarkers
     const involuntaryWeight = wVis + wAud;
     const involuntaryScore = involuntaryWeight > 0 
       ? (wVis * sVis + wAud * sAud) / involuntaryWeight 
@@ -237,7 +262,7 @@ export class CrossAttentionFusionEngine {
     const audPct = Math.round(wAud * 100);
     const txtPct = Math.round(wTxt * 100);
 
-    let xaiReasoning = `Severity ${fusedSeverity}/10 dynamically weighted: ${audPct}% Vocal Acoustics, ${visPct}% Facial Kinematics, ${txtPct}% Dialogue Content.`;
+    let xaiReasoning = `Severity ${fusedSeverity}/10 dynamically weighted by Scaled Dot-Product Attention: ${audPct}% Vocal Acoustics, ${visPct}% Facial Kinematics, ${txtPct}% Dialogue Content.`;
     if (isMaskingAlertActive) {
       xaiReasoning += ` CRITICAL SYMPTOM MASKING: Verbal report (${statedVerbal}/10) diverges significantly from autonomic facial/vocal arousal (${involuntaryScore.toFixed(1)}/10) with D=${discrepancyD} > 3.5.`;
     }

@@ -88,9 +88,9 @@ export function SessionReplayHeatmap() {
                 dataKey="stress" 
                 stroke="#6366f1" 
                 strokeWidth={3}
-                dot={(props: any) => {
+                dot={(props: { cx?: number; cy?: number; payload?: { stress: number } }) => {
                   const { cx, cy, payload } = props;
-                  if (payload.stress > 8) {
+                  if (payload && payload.stress > 8) {
                     return (
                       <circle cx={cx} cy={cy} r={5} fill="#ef4444" stroke="#fff" strokeWidth={2} />
                     );

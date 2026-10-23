@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
 
-const adminApp = (admin as any).default || admin;
+const adminApp = (admin as typeof admin & { default?: typeof admin }).default || admin;
 
 if (!adminApp.apps || !adminApp.apps.length) {
   try {
@@ -11,8 +11,9 @@ if (!adminApp.apps || !adminApp.apps.length) {
         privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n') || '-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDK\n-----END PRIVATE KEY-----\n',
       }),
     });
-  } catch (error: any) {
-    console.error('Firebase admin initialization error', error.stack);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.stack : 'Unknown error';
+    console.error('Firebase admin initialization error', errorMsg);
   }
 }
 

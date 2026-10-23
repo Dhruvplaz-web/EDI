@@ -39,11 +39,16 @@ Output strict JSON with the following keys:
 - icd11SuggestedCodes: Array of 1-3 appropriate ICD-11 diagnosis codes (e.g., ["6A70.0", "6B00"]).
 - riskLevel: One of "STABLE", "MODERATE", "ELEVATED", or "CRITICAL".`;
 
+        // 4-second circuit breaker timeout to protect clinician responsiveness
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+
         const geminiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            signal: controller.signal,
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],
               generationConfig: {
@@ -52,6 +57,7 @@ Output strict JSON with the following keys:
             })
           }
         );
+        clearTimeout(timeoutId);
 
         if (geminiRes.ok) {
           const geminiData = await geminiRes.json();
@@ -68,23 +74,32 @@ Output strict JSON with the following keys:
               },
               icd11SuggestedCodes: parsed.icd11SuggestedCodes || ["6A70"],
               riskLevel: parsed.riskLevel || (body.discrepancyAlert ? "ELEVATED" : "MODERATE"),
-              generatedBy: "Gemini 1.5 Flash Ambient Scribe"
+              generatedBy: "Gemini 1.5 Flash Ambient Scribe (Cloud Enriched)",
+              engineSource: "AI_CLOUD_ENRICHED"
             });
           }
+        } else if (geminiRes.status === 429) {
+          console.warn("[CircuitBreaker] Gemini rate limit (429) hit. Seamlessly falling back to local deterministic scribe.");
         }
-      } catch (geminiError) {
-        console.warn("Gemini Scribe generation failed, using local deterministic engine:", geminiError);
+      } catch (geminiError: unknown) {
+        const errorMsg = geminiError instanceof Error ? geminiError.message : "Timeout/Network error";
+        console.warn("[CircuitBreaker] Cloud AI unavailable (" + errorMsg + "), falling back to deterministic scribe.");
       }
     }
 
-    // High-fidelity clinical NLP synthesis
+    // High-fidelity local deterministic clinical synthesis (Zero tokens, Zero cloud cost, 100% reliable)
     const localResult = synthesizeSOAPNote(body);
-    return NextResponse.json(localResult);
+    return NextResponse.json({
+      ...localResult,
+      generatedBy: "Praxis Multi-Modal Clinical NLP Scribe (Local Deterministic Mode)",
+      engineSource: "LOCAL_DETERMINISTIC_DSP"
+    });
 
-  } catch (error: any) {
-    console.error("SOAP generation route error:", error);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : "Failed to generate clinical SOAP note";
+    console.error("SOAP generation route error:", errorMsg);
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to generate clinical SOAP note" },
+      { success: false, error: errorMsg },
       { status: 500 }
     );
   }

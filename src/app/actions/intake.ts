@@ -4,7 +4,7 @@ import { adminDb } from '@/lib/firebase/server'
 import { cookies } from 'next/headers'
 import * as admin from 'firebase-admin'
 
-export async function submitIntake(formData: any) {
+export async function submitIntake(formData: Record<string, unknown>) {
   try {
     const cookieStore = await cookies()
     // Ideally, we'd verify the session token, but for now we just get the role
@@ -43,8 +43,9 @@ export async function submitIntake(formData: any) {
     })
 
     return { success: true }
-  } catch (error: any) {
-    console.error('Intake submission failed:', error)
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Intake submission failed:', errorMsg);
     return { success: false, error: 'Failed to submit intake form.' }
   }
 }

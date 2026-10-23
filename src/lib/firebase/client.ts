@@ -11,8 +11,6 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "dummy-app-id",
 };
 
-console.log("SERVER SIDE CONFIG CHECK:", firebaseConfig);
-
 // Initialize Firebase for Client Side
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 

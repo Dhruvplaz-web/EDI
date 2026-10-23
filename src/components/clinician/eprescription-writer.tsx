@@ -5,10 +5,21 @@ import { Pill, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
+export interface PrescriptionData {
+  patientId: string;
+  patientName: string;
+  icdCode: string;
+  medication: string;
+  dosage: string;
+  refills: string;
+  instructions: string;
+  timestamp: string;
+}
+
 interface EPrescriptionWriterProps {
   patientName: string;
   patientId: string;
-  onIssuePrescription?: (prescription: any) => void;
+  onIssuePrescription?: (prescription: PrescriptionData) => void;
 }
 
 export function EPrescriptionWriter({ patientName, patientId, onIssuePrescription }: EPrescriptionWriterProps) {

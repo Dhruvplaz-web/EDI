@@ -26,8 +26,9 @@ self.onmessage = async (e: MessageEvent) => {
         numFaces: 1
       });
       self.postMessage({ type: 'INIT_COMPLETE', success: true });
-    } catch (err: any) {
-      self.postMessage({ type: 'INIT_ERROR', error: err.message || 'Worker initialization failed' });
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Worker initialization failed';
+      self.postMessage({ type: 'INIT_ERROR', error: errorMsg });
     }
   } else if (type === 'PROCESS_FRAME') {
     const { imageBitmap, timestamp } = payload;
@@ -40,7 +41,7 @@ self.onmessage = async (e: MessageEvent) => {
     try {
       const results = faceLandmarker.detectForVideo(imageBitmap, timestamp);
 
-      let extractedShapes: Record<string, number> = {};
+      const extractedShapes: Record<string, number> = {};
       if (results.faceBlendshapes && results.faceBlendshapes.length > 0) {
         const categories = results.faceBlendshapes[0].categories;
         for (const cat of categories) {
