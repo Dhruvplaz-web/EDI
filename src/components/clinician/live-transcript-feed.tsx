@@ -39,35 +39,35 @@ export function LiveTranscriptFeed({
   }, [transcriptHistory, interimText]);
 
   const getWpmStatus = (wpm: number) => {
-    if (wpm > 180) return { label: 'Pressured Speech (Manic)', color: 'text-amber-700 bg-amber-50 border-amber-200' };
-    if (wpm < 85) return { label: 'Psychomotor Retardation (Depressive)', color: 'text-indigo-700 bg-indigo-50 border-indigo-200' };
-    return { label: 'Normative Cadence', color: 'text-teal-700 bg-teal-50 border-teal-200' };
+    if (wpm > 180) return { label: 'Rapid Speech', color: 'text-amber-700 bg-amber-50 border-amber-200' };
+    if (wpm < 85) return { label: 'Slow Speech', color: 'text-[#52525B] bg-[#F4F4F5] border-[#E4E4E7]' };
+    return { label: 'Normal Pace', color: 'text-[#09090B] bg-[#F4F4F5] border-[#E4E4E7]' };
   };
 
   const wpmStatus = getWpmStatus(speechVelocityWpm);
   const clinicalScore = (1.0 + 9.0 * linguisticSeverity).toFixed(1);
 
   return (
-    <Card className="bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-xl shadow-slate-200/50 font-sans flex flex-col h-full">
-      <CardHeader className="p-4 border-b border-slate-100 flex flex-row items-center justify-between pb-3">
+    <Card className="bg-white/95 backdrop-blur-sm border border-[#E4E4E7] shadow-[0_1px_3px_rgba(0,0,0,0.02),0_4px_16px_rgba(0,0,0,0.02)] rounded-xl font-sans flex flex-col h-full text-left">
+      <CardHeader className="p-4 border-b border-[#F4F4F5] flex flex-row items-center justify-between pb-3">
         <div>
-          <CardTitle className="text-sm font-bold text-slate-900 flex items-center">
-            <MessageSquare className="w-4 h-4 mr-2 text-teal-600" /> Live Speech Transcription & NLP
+          <CardTitle className="text-sm font-semibold text-[#09090B] flex items-center">
+            <MessageSquare className="w-4 h-4 mr-2 text-[#0066FF]" strokeWidth={1.75} /> Live Spoken Dialogue Transcript
           </CardTitle>
-          <CardDescription className="text-xs text-slate-500">
-            Real-time psychiatric symptom parsing & speech velocity tracking.
+          <CardDescription className="text-xs text-[#71717A] mt-0.5">
+            Real-time speech transcription and conversational pacing tracking.
           </CardDescription>
         </div>
 
         <div className="flex items-center space-x-2">
           {/* Active Listening Status */}
-          <span className={`px-2.5 py-1 text-[10px] font-mono font-bold rounded-full border flex items-center ${isListening ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-            <span className={`w-2 h-2 rounded-full mr-1.5 ${isListening ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-            {isListening ? 'Streaming Speech' : 'Muted'}
+          <span className={`px-2.5 py-1 text-[11px] font-mono font-medium rounded-full border flex items-center ${isListening ? 'bg-[#F0F6FF] text-[#0066FF] border-[#BFDBFE]' : 'bg-[#F4F4F5] text-[#71717A] border-[#E4E4E7]'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${isListening ? 'bg-[#0066FF] animate-pulse' : 'bg-[#A1A1AA]'}`} />
+            {isListening ? 'Transcribing' : 'Muted'}
           </span>
 
           {/* Speech Cadence Badge */}
-          <span className={`px-2.5 py-1 text-[10px] font-mono font-bold rounded-full border ${wpmStatus.color}`}>
+          <span className={`px-2.5 py-1 text-[11px] font-mono font-medium rounded-full border ${wpmStatus.color}`}>
             {speechVelocityWpm} WPM • {wpmStatus.label}
           </span>
         </div>
@@ -75,24 +75,24 @@ export function LiveTranscriptFeed({
 
       {/* Real-time Crisis Banner */}
       {crisisAlert && (
-        <div className="bg-rose-50 border-b border-rose-200 px-4 py-2 text-rose-800 text-xs font-semibold flex items-center justify-between animate-pulse">
+        <div className="bg-rose-50 border-b border-rose-200 px-4 py-2 text-rose-700 text-xs font-semibold flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>High-Risk Clinical Tokens Flagged in Patient Utterance</span>
+            <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" strokeWidth={1.75} />
+            <span>High-risk clinical indicators detected in patient utterance</span>
           </div>
-          <span className="font-mono text-[11px] bg-rose-200 text-rose-900 px-2 py-0.5 rounded font-bold">
+          <span className="font-mono text-xs bg-white text-rose-700 border border-rose-200 px-2 py-0.5 rounded font-bold">
             Severity: {clinicalScore} / 10
           </span>
         </div>
       )}
 
       {/* Scrolling Utterance List */}
-      <CardContent className="p-4 flex-1 overflow-y-auto space-y-3 min-h-[220px] max-h-[340px]" ref={scrollRef}>
+      <CardContent className="p-4 flex-1 overflow-y-auto space-y-2.5 min-h-[220px] max-h-[340px]" ref={scrollRef}>
         {transcriptHistory.length === 0 && !interimText && (
-          <div className="h-full flex flex-col items-center justify-center text-slate-400 py-12 space-y-2">
-            <Mic className="w-8 h-8 opacity-40 text-teal-600" />
-            <p className="text-xs text-slate-500 font-medium">Waiting for patient or clinician spoken dialogue...</p>
-            <p className="text-[10px] text-slate-400">Tokens are parsed locally for DSM-5 symptom biomarkers</p>
+          <div className="h-full flex flex-col items-center justify-center text-[#A1A1AA] py-12 space-y-2">
+            <Mic className="w-7 h-7 text-[#0066FF] opacity-60" strokeWidth={1.75} />
+            <p className="text-xs text-[#52525B] font-medium">Waiting for spoken audio from patient or clinician...</p>
+            <p className="text-[11px] text-[#A1A1AA]">Audio is processed directly on the client for privacy</p>
           </div>
         )}
 
@@ -101,37 +101,37 @@ export function LiveTranscriptFeed({
           return (
             <div 
               key={entry.id} 
-              className={`p-3 rounded-xl border transition-all ${
+              className={`p-3 rounded-lg border transition-all text-left ${
                 entry.analysis.isCrisisAlert 
-                  ? 'bg-rose-50/80 border-rose-200 shadow-sm' 
+                  ? 'bg-rose-50/60 border-rose-200 shadow-sm' 
                   : hasTokens 
-                  ? 'bg-amber-50/60 border-amber-200' 
-                  : 'bg-slate-50/80 border-slate-200/80'
+                  ? 'bg-amber-50/40 border-amber-200' 
+                  : 'bg-[#FAFAFA] border-[#E4E4E7]'
               }`}
             >
-              <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 mb-1">
-                <span className="font-bold text-slate-700">
+              <div className="flex items-center justify-between text-[11px] font-mono text-[#71717A] mb-1">
+                <span className="font-semibold text-[#09090B]">
                   {entry.speaker === 'patient' ? 'Patient' : 'Clinician'}
                 </span>
-                <span>{new Date(entry.timestamp).toLocaleTimeString()}</span>
+                <span>{new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
               </div>
 
-              <p className="text-xs text-slate-900 leading-relaxed font-sans">
+              <p className="text-xs text-[#09090B] leading-relaxed font-sans">
                 {entry.text}
               </p>
 
               {/* Flagged Tokens Badges */}
               {hasTokens && (
-                <div className="mt-2 flex flex-wrap gap-1.5 pt-1.5 border-t border-slate-200/60">
+                <div className="mt-2 flex flex-wrap gap-1.5 pt-1.5 border-t border-[#E4E4E7]">
                   {entry.analysis.flaggedTokens.map((token, i) => (
                     <span 
                       key={i}
-                      className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded font-medium border ${
                         token.category === 'suicide_risk' 
-                          ? 'bg-rose-600 text-white' 
+                          ? 'bg-rose-50 text-rose-700 border-rose-200' 
                           : token.category === 'depressive_despair'
-                          ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                          : 'bg-amber-100 text-amber-800 border border-amber-300'
+                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
                       }`}
                     >
                       {token.phrase} ({token.category.replace('_', ' ')})
@@ -145,28 +145,28 @@ export function LiveTranscriptFeed({
 
         {/* Interim In-Progress Utterance */}
         {interimText && (
-          <div className="p-2.5 rounded-xl bg-teal-50/50 border border-teal-200/60 text-xs italic text-teal-900 animate-pulse">
-            <span className="font-mono text-[10px] font-bold text-teal-700 mr-2">Speaking:</span>
+          <div className="p-2.5 rounded-lg bg-[#F0F6FF] border border-[#BFDBFE] text-xs italic text-[#0066FF] animate-pulse">
+            <span className="font-mono text-[11px] font-semibold text-[#0066FF] mr-2">Speaking:</span>
             {interimText}...
           </div>
         )}
       </CardContent>
 
       {/* Action Footer */}
-      <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-        <span className="text-[11px] font-mono text-slate-500">
-          NLP Severity: <strong className="text-slate-900 font-bold">{clinicalScore} / 10</strong>
+      <div className="p-3 bg-[#FAFAFA] border-t border-[#E4E4E7] flex items-center justify-between">
+        <span className="text-xs font-mono text-[#71717A]">
+          Signal Severity: <strong className="text-[#09090B] font-semibold">{clinicalScore} / 10</strong>
         </span>
 
         <div className="flex items-center space-x-2">
           {onClear && (
-            <Button variant="ghost" size="sm" onClick={onClear} className="text-xs text-slate-500 hover:text-slate-800 h-7 px-2">
+            <Button variant="ghost" size="sm" onClick={onClear} className="text-xs text-[#71717A] hover:text-[#09090B] h-7 px-2.5">
               Clear
             </Button>
           )}
           {onSendToSOAP && (
-            <Button size="sm" onClick={onSendToSOAP} className="text-xs bg-teal-700 hover:bg-teal-800 text-white h-7 px-3 font-semibold">
-              <Sparkles className="w-3.5 h-3.5 mr-1" /> Sync to SOAP Note
+            <Button size="sm" onClick={onSendToSOAP} className="text-xs bg-[#0066FF] hover:bg-[#0052CC] text-white h-7 px-3 font-medium rounded-lg shadow-sm">
+              <Sparkles className="w-3.5 h-3.5 mr-1" strokeWidth={1.75} /> Sync to Clinical Notes
             </Button>
           )}
         </div>

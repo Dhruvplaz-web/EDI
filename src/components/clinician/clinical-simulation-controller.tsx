@@ -133,44 +133,46 @@ export function ClinicalSimulationController({
   onSelectScenario
 }: ClinicalSimulationControllerProps) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 text-white shadow-xl">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-3">
-        <div className="flex items-center space-x-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-pulse" />
-          <h4 className="text-xs font-bold tracking-wide uppercase text-slate-200 flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-teal-400" />
-            Examiner Defense Simulator (DAIC-WOZ Benchmark Suite)
-          </h4>
-          <span className="text-[10px] bg-slate-800 text-teal-300 font-mono px-2 py-0.5 rounded border border-slate-700">
-            Zero-Token Local DSP
-          </span>
+    <div className="bg-white/95 backdrop-blur-sm border border-[#E4E4E7] rounded-xl p-4 text-[#09090B] shadow-[0_1px_3px_rgba(0,0,0,0.02),0_4px_16px_rgba(0,0,0,0.02)]">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center space-x-2.5 text-left">
+          <div className="w-2 h-2 rounded-full bg-[#0066FF] animate-pulse" />
+          <div>
+            <h4 className="text-xs font-semibold tracking-tight text-[#09090B] flex items-center gap-1.5 uppercase font-mono">
+              <Activity className="w-3.5 h-3.5 text-[#0066FF]" strokeWidth={1.75} />
+              Clinical Presentation Simulator
+            </h4>
+            <p className="text-[11px] text-[#71717A]">
+              Test signal detection and cross-modal discrepancy across standardized clinical profiles.
+            </p>
+          </div>
         </div>
 
         <button
           onClick={() => onToggleSimulating(!isSimulating)}
-          className={`text-xs px-3 py-1.5 rounded-full font-bold transition-all flex items-center gap-1.5 ${
+          className={`text-xs px-3.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 shadow-sm shrink-0 ${
             isSimulating
-              ? 'bg-teal-500 hover:bg-teal-400 text-slate-950 shadow-md shadow-teal-500/20'
-              : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+              ? 'bg-[#0066FF] hover:bg-[#0052CC] text-white'
+              : 'border border-[#E4E4E7] bg-white text-[#27272A] hover:bg-[#F4F4F5]'
           }`}
         >
           {isSimulating ? (
             <>
-              <CheckCircle2 className="w-3.5 h-3.5" /> Simulation Stream Active
+              <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={1.75} /> Simulation Running
             </>
           ) : (
             <>
-              <Play className="w-3.5 h-3.5" /> Launch Examiner Defense Simulator
+              <Play className="w-3.5 h-3.5" strokeWidth={1.75} /> Start Simulation Test
             </>
           )}
         </button>
       </div>
 
       {isSimulating && (
-        <div className="pt-2 border-t border-slate-800/80">
-          <div className="text-[11px] text-slate-400 mb-2 flex items-center justify-between">
-            <span>Select Clinical Presentation Scenario to stream into Cross-Attention Engine:</span>
-            <span className="font-mono text-teal-400 text-[10px]">Deterministic DSP Math Active</span>
+        <div className="mt-3 pt-3 border-t border-[#F4F4F5] text-left">
+          <div className="text-[11px] text-[#71717A] mb-2 flex items-center justify-between">
+            <span>Select a presentation profile to test signal analysis:</span>
+            <span className="font-mono text-[#0066FF] text-[10px] font-semibold">Active Model: Multimodal Fusion</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
@@ -182,24 +184,21 @@ export function ClinicalSimulationController({
                 <button
                   key={scenarioKey}
                   onClick={() => onSelectScenario(scenarioKey)}
-                  className={`text-left p-2.5 rounded-xl border transition-all ${
+                  className={`text-left p-3 rounded-lg border transition-all ${
                     isSelected
-                      ? 'bg-slate-800/90 border-teal-400 shadow-md ring-1 ring-teal-400/50'
-                      : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-800/50'
+                      ? 'bg-[#F0F6FF] border-[#0066FF] ring-1 ring-[#0066FF]/30 shadow-sm'
+                      : 'bg-[#FAFAFA] border-[#E4E4E7] hover:border-[#A1A1AA] hover:bg-white'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-slate-100 flex items-center gap-1">
-                      {scenarioKey === 'crisis' && <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />}
-                      {scenarioKey === 'masked' && <Sparkles className="w-3.5 h-3.5 text-amber-400" />}
-                      {scenarioKey === 'blunted' && <HeartCrack className="w-3.5 h-3.5 text-indigo-400" />}
+                    <span className="text-xs font-semibold text-[#09090B] flex items-center gap-1.5">
                       {sc.name}
                     </span>
-                    <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-semibold border ${sc.badgeColor}`}>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded font-medium border bg-white border-[#E4E4E7] text-[#52525B]">
                       {sc.badge}
                     </span>
                   </div>
-                  <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">
+                  <p className="text-[10px] text-[#71717A] line-clamp-2 leading-relaxed">
                     {sc.description}
                   </p>
                 </button>
@@ -207,11 +206,11 @@ export function ClinicalSimulationController({
             })}
           </div>
 
-          <div className="mt-2.5 p-2 bg-slate-950/80 border border-slate-800/90 rounded-lg flex items-center justify-between text-[11px] font-mono text-slate-300">
-            <span className="text-teal-400 font-semibold truncate mr-2">
+          <div className="mt-3 p-2.5 bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs font-mono text-[#52525B] gap-1">
+            <span className="text-[#09090B] font-medium truncate mr-2">
               Patient Utterance: &ldquo;{SIMULATION_SCENARIOS[activeScenario].samplePhrase}&rdquo;
             </span>
-            <span className="text-slate-500 shrink-0 text-[10px]">
+            <span className="text-[#71717A] shrink-0 text-[11px]">
               AU4: {SIMULATION_SCENARIOS[activeScenario].au4BrowDown} • Jitter: {SIMULATION_SCENARIOS[activeScenario].jitterPercent}% • {SIMULATION_SCENARIOS[activeScenario].speechVelocityWpm} WPM
             </span>
           </div>

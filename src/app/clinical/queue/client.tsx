@@ -305,213 +305,230 @@ export function TriageBoardClient({ role, canWriteNotes }: { role: string | unde
     >
       <div className="space-y-6 font-sans">
         
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-4 gap-2">
-          <div>
-            <h3 className="text-base font-semibold text-slate-900 tracking-tight">
-              Psychiatric Triage Queue & Multimodal AI Intake Board
-            </h3>
-            <p className="text-xs text-slate-500">
-              Live patient cohort prioritized by multimodal AI baseline severity score I_triage (descending).
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-[#E4E4E7] pb-4 gap-3">
+          <div className="text-left">
+            <h1 className="text-xl font-bold text-[#09090B] tracking-tight">
+              Patient Care Queue
+            </h1>
+            <p className="text-xs text-[#71717A] mt-0.5">
+              Live intake prioritized by clinical urgency and multi-signal assessment.
             </p>
           </div>
-          <span className="px-3 py-1 bg-teal-50 border border-teal-200 text-teal-800 text-xs font-mono font-bold rounded-full">
-            6 Cohort Patients Loaded
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#F0F6FF] border border-[#BFDBFE] text-[#0066FF] text-xs font-semibold rounded-full font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0066FF] animate-pulse" />
+              6 Patients Active
+            </span>
+          </div>
         </div>
 
         <PredictiveRiskBoard />
         
         {loading ? (
-          <div className="space-y-4">
-            {[1,2,3].map(i => (
-              <div key={i} className="h-24 bg-white border border-slate-200 rounded-2xl animate-pulse shadow-sm" />
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-24 bg-white border border-[#E4E4E7] rounded-xl animate-pulse shadow-sm" />
             ))}
           </div>
         ) : (
-          <div className="grid gap-4">
-            {queue.map((patient) => (
-              <motion.div 
-                layout
-                key={patient.docId}
-                className={`border rounded-2xl bg-white shadow-sm transition-all hover:shadow-md ${
-                  patient.severity === 'critical' 
-                    ? 'border-rose-300 ring-1 ring-rose-200' 
-                    : patient.severity === 'urgent'
-                      ? 'border-amber-300'
-                      : 'border-slate-200/80'
-                }`}
-              >
-                <div 
-                  className="p-5 flex flex-col md:flex-row md:items-center justify-between cursor-pointer hover:bg-slate-50/60 transition-all gap-4"
-                  onClick={() => setExpandedId(expandedId === patient.id ? null : patient.id)}
+          <div className="grid gap-3">
+            {queue.map((patient) => {
+              const isCritical = patient.severity === 'critical';
+              const isUrgent = patient.severity === 'urgent';
+              
+              return (
+                <motion.div 
+                  layout
+                  key={patient.docId}
+                  className={`border rounded-xl bg-white/95 backdrop-blur-sm transition-all hover:border-[#A1A1AA] shadow-[0_1px_3px_rgba(0,0,0,0.02),0_4px_16px_rgba(0,0,0,0.02)] ${
+                    isCritical 
+                      ? 'border-rose-300/80 bg-gradient-to-r from-rose-50/20 to-white' 
+                      : isUrgent 
+                        ? 'border-amber-300/80' 
+                        : 'border-[#E4E4E7]'
+                  }`}
                 >
-                  <div className="flex items-start md:items-center gap-4">
-                    {/* Severity Badge */}
-                    <div 
-                      className={`flex flex-col items-center justify-center h-14 w-14 rounded-2xl font-extrabold text-base shadow-sm shrink-0 ${
-                        patient.severity === 'critical' ? 'bg-rose-100 text-rose-800 border border-rose-200' :
-                        patient.severity === 'urgent' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                        'bg-teal-100 text-teal-800 border border-teal-200'
-                      }`}
-                      title="AI Psychiatric Severity Score (1.0 - 10.0)"
-                    >
-                      <span className="text-xs font-mono font-bold leading-none">{patient.score}</span>
-                      <span className="text-[9px] uppercase font-bold tracking-wider mt-0.5 opacity-80">{patient.severity}</span>
-                    </div>
-
-                    {/* Patient Info Header */}
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <h3 className="font-semibold text-base text-slate-900">{patient.name}</h3>
-                        <span className="text-xs font-mono text-slate-500">({patient.age}y {patient.gender})</span>
-                        <span className="px-2 py-0.5 bg-slate-100 text-slate-700 font-mono text-[10px] font-bold rounded-md">
-                          {patient.icdCode}
+                  <div 
+                    className="p-5 flex flex-col md:flex-row md:items-center justify-between cursor-pointer hover:bg-[#F8F9FA]/60 transition-all gap-4"
+                    onClick={() => setExpandedId(expandedId === patient.id ? null : patient.id)}
+                  >
+                    <div className="flex items-start md:items-center gap-4 text-left">
+                      {/* Priority Score Indicator */}
+                      <div 
+                        className={`flex flex-col items-center justify-center h-12 w-12 rounded-lg font-bold text-sm shrink-0 border ${
+                          isCritical 
+                            ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                            : isUrgent 
+                              ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                              : 'bg-[#F4F4F5] text-[#18181B] border-[#E4E4E7]'
+                        }`}
+                        title="Priority Score (1.0 - 10.0)"
+                      >
+                        <span className="font-mono text-sm leading-none tabular-nums">{patient.score.toFixed(1)}</span>
+                        <span className="text-[9px] uppercase tracking-wider font-semibold mt-0.5 opacity-80">
+                          {isCritical ? 'High' : isUrgent ? 'Med' : 'Std'}
                         </span>
                       </div>
-                      
-                      <p className="text-xs font-semibold text-blue-900 mt-0.5">{patient.diagnosis}</p>
-                      <p className="text-xs text-slate-600 font-medium truncate max-w-xl mt-0.5">
-                        <span className="font-bold text-slate-700">Complaint:</span> {patient.chiefComplaint}
-                      </p>
+
+                      {/* Patient Info Header */}
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="font-semibold text-sm text-[#09090B] tracking-tight">{patient.name}</h2>
+                          <span className="text-xs font-mono text-[#71717A]">({patient.age}y • {patient.gender})</span>
+                          <span className="px-2 py-0.5 bg-[#F4F4F5] text-[#52525B] font-mono text-[10px] font-medium rounded border border-[#E4E4E7]">
+                            {patient.icdCode}
+                          </span>
+                          <span className="text-[11px] text-[#A1A1AA] font-mono">
+                            {patient.wait}
+                          </span>
+                        </div>
+                        
+                        <p className="text-xs font-medium text-[#27272A] mt-0.5">{patient.diagnosis}</p>
+                        <p className="text-xs text-[#71717A] truncate max-w-xl mt-0.5">
+                          <span className="text-[#3F3F46] font-medium">Complaint:</span> {patient.chiefComplaint}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Actions & Claiming */}
+                    <div className="flex items-center justify-between md:justify-end gap-2.5 pt-3 md:pt-0 border-t md:border-0 border-[#F4F4F5]">
+                      {patient.claimedByName ? (
+                        <span className="text-xs bg-[#F4F4F5] text-[#27272A] border border-[#E4E4E7] px-3 py-1.5 rounded-lg flex items-center font-medium">
+                          <UserCheck className="w-3.5 h-3.5 mr-1.5 text-[#0066FF]" strokeWidth={1.75} /> Claimed
+                        </span>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleClaimPatient(patient.docId); }}
+                          disabled={claimingId === patient.docId}
+                          className="bg-[#18181B] hover:bg-[#27272A] text-white text-xs font-medium px-3.5 py-1.5 rounded-lg transition-all shadow-sm"
+                        >
+                          {claimingId === patient.docId ? "Claiming..." : "Claim Session"}
+                        </button>
+                      )}
+
+                      <Link 
+                        href={`/clinical/records/${patient.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="border border-[#E4E4E7] hover:bg-[#F4F4F5] text-[#27272A] px-3 py-1.5 rounded-lg text-xs font-medium transition-all hidden sm:flex items-center"
+                        title="View Medical Chart"
+                      >
+                        <FileText className="w-3.5 h-3.5 mr-1 text-[#71717A]" strokeWidth={1.75} /> Medical Chart
+                      </Link>
+
+                      <Link 
+                        href={`/clinical/consult/${patient.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-[#0066FF] hover:bg-[#0052CC] text-white px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all shadow-sm flex items-center gap-1.5"
+                      >
+                        <Video className="w-3.5 h-3.5" strokeWidth={1.75} /> Enter Room
+                      </Link>
+
+                      <div className="p-1 text-[#71717A] hover:text-[#09090B]">
+                        {expandedId === patient.id ? <ChevronUp className="h-4 w-4" strokeWidth={1.75} /> : <ChevronDown className="h-4 w-4" strokeWidth={1.75} />}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Actions & Claiming */}
-                  <div className="flex items-center justify-between md:justify-end gap-3 pt-2 md:pt-0 border-t md:border-0 border-slate-100">
-                    {patient.claimedByName ? (
-                      <span className="text-xs bg-teal-50 text-teal-800 border border-teal-200 px-3 py-1 rounded-full flex items-center font-mono font-bold shadow-sm">
-                        <UserCheck className="w-3.5 h-3.5 mr-1.5 text-teal-600" /> Claimed
-                      </span>
-                    ) : (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleClaimPatient(patient.docId); }}
-                        disabled={claimingId === patient.docId}
-                        className="bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-sm transition-all"
+                  {/* Expanded Multimodal Assessment Details Drawer */}
+                  <AnimatePresence>
+                    {expandedId === patient.id && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="border-t border-[#E4E4E7] bg-[#FAFAFA] p-5 rounded-b-xl"
                       >
-                        {claimingId === patient.docId ? "Claiming..." : "Claim Session"}
-                      </button>
-                    )}
-
-                    <Link 
-                      href={`/clinical/records/${patient.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-xl text-xs font-semibold transition-all shadow-sm hidden sm:flex items-center"
-                      title="View Longitudinal Medical Chart"
-                    >
-                      <FileText className="w-3.5 h-3.5 mr-1 text-slate-500" /> EHR Chart
-                    </Link>
-
-                    <Link 
-                      href={`/clinical/consult/${patient.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="bg-teal-700 hover:bg-teal-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition-all shadow-sm flex items-center"
-                    >
-                      <Video className="w-3.5 h-3.5 mr-1.5" /> Launch Room
-                    </Link>
-
-                    {expandedId === patient.id ? <ChevronUp className="h-5 w-5 text-slate-400" /> : <ChevronDown className="h-5 w-5 text-slate-400" />}
-                  </div>
-                </div>
-
-                {/* Expanded Multimodal AI Details Drawer */}
-                <AnimatePresence>
-                  {expandedId === patient.id && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="border-t border-slate-200 bg-slate-50/70 p-6 rounded-b-2xl"
-                    >
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        
-                        {/* Column 1: Calculated ML Parameters */}
-                        <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                          <h4 className="font-semibold text-xs text-slate-900 flex items-center uppercase tracking-wider font-mono">
-                            <BrainCircuit className="h-4 w-4 mr-1.5 text-blue-700" /> ML Calculated Biomarkers
-                          </h4>
-                          <div className="space-y-2 text-xs font-mono text-slate-700">
-                            <div className="flex justify-between border-b pb-1">
-                              <span>AU4 BrowDown (Frown):</span>
-                              <span className="font-bold text-slate-900">{patient.au4Frown}%</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-1">
-                              <span>AU15 Lip Depressor:</span>
-                              <span className="font-bold text-slate-900">{patient.au15Depressor}%</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-1">
-                              <span>Speech Cadence Jitter:</span>
-                              <span className="font-bold text-rose-700">{patient.speechJitter}%</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Pitch Variance:</span>
-                              <span className="font-bold text-slate-900">{patient.pitchVariance} Hz</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Column 2: Clinical Screening Scores */}
-                        <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                          <h4 className="font-semibold text-xs text-slate-900 flex items-center uppercase tracking-wider font-mono">
-                            <Activity className="h-4 w-4 mr-1.5 text-teal-700" /> Screening Metrics
-                          </h4>
-                          <div className="space-y-2 text-xs font-mono text-slate-700">
-                            <div className="flex justify-between border-b pb-1">
-                              <span>PHQ-9 Depression Score:</span>
-                              <span className="font-bold text-slate-900">{patient.phq9Score} / 27</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-1">
-                              <span>GAD-7 Anxiety Score:</span>
-                              <span className="font-bold text-slate-900">{patient.gad7Score} / 21</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-1">
-                              <span>Discrepancy Index D(t):</span>
-                              <span className={`font-bold ${patient.discrepancyD > 3.5 ? 'text-rose-600 font-extrabold' : 'text-slate-900'}`}>
-                                {patient.discrepancyD} {patient.discrepancyD > 3.5 && '(Alert)'}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Medical History:</span>
-                              <span className="font-bold text-slate-900">{patient.history.length} Flags</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Column 3: XAI Severity Explanation */}
-                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                          <div>
-                            <h4 className="font-semibold text-xs text-slate-900 uppercase tracking-wider font-mono mb-2">
-                              XAI Severity Rationale
-                            </h4>
-                            <p className="text-xs text-slate-600 leading-relaxed font-sans">
-                              {patient.xaiSummary}
-                            </p>
-                          </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 text-left">
                           
-                          <div className="pt-4 border-t border-slate-100 flex justify-between items-center gap-2">
-                            <span className="text-[11px] font-mono text-slate-500">ICD-11 Verified</span>
-                            <div className="flex items-center gap-2">
-                              <Link 
-                                href={`/clinical/records/${patient.id}`}
-                                className="border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 rounded-xl transition-all shadow-sm flex items-center"
-                              >
-                                <FileText className="w-3.5 h-3.5 mr-1 text-slate-500" /> View EHR
-                              </Link>
-                              <Link 
-                                href={`/clinical/consult/${patient.id}`}
-                                className="bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center"
-                              >
-                                <Video className="w-3.5 h-3.5 mr-1.5" /> Launch Room
-                              </Link>
+                          {/* Column 1: Observed Physical Signs */}
+                          <div className="space-y-3 bg-white p-4 rounded-lg border border-[#E4E4E7] shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                            <h4 className="font-semibold text-xs text-[#09090B] flex items-center uppercase tracking-wider font-mono">
+                              <BrainCircuit className="h-4 w-4 mr-1.5 text-[#0066FF]" strokeWidth={1.75} /> Observed Physical Signs
+                            </h4>
+                            <div className="space-y-2 text-xs font-mono text-[#52525B]">
+                              <div className="flex justify-between border-b border-[#F4F4F5] pb-1.5">
+                                <span>Brow furrow intensity:</span>
+                                <span className="font-semibold text-[#09090B]">{patient.au4Frown}%</span>
+                              </div>
+                              <div className="flex justify-between border-b border-[#F4F4F5] pb-1.5">
+                                <span>Lip corner depression:</span>
+                                <span className="font-semibold text-[#09090B]">{patient.au15Depressor}%</span>
+                              </div>
+                              <div className="flex justify-between border-b border-[#F4F4F5] pb-1.5">
+                                <span>Speech rhythm variation:</span>
+                                <span className="font-semibold text-[#09090B]">{patient.speechJitter}%</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Voice pitch range:</span>
+                                <span className="font-semibold text-[#09090B]">{patient.pitchVariance} Hz</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            ))}
+                          {/* Column 2: Questionnaire Results */}
+                          <div className="space-y-3 bg-white p-4 rounded-lg border border-[#E4E4E7] shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                            <h4 className="font-semibold text-xs text-[#09090B] flex items-center uppercase tracking-wider font-mono">
+                              <Activity className="h-4 w-4 mr-1.5 text-[#0066FF]" strokeWidth={1.75} /> Questionnaire Results
+                            </h4>
+                            <div className="space-y-2 text-xs font-mono text-[#52525B]">
+                              <div className="flex justify-between border-b border-[#F4F4F5] pb-1.5">
+                                <span>Depression score (PHQ-9):</span>
+                                <span className="font-semibold text-[#09090B]">{patient.phq9Score} / 27</span>
+                              </div>
+                              <div className="flex justify-between border-b border-[#F4F4F5] pb-1.5">
+                                <span>Anxiety score (GAD-7):</span>
+                                <span className="font-semibold text-[#09090B]">{patient.gad7Score} / 21</span>
+                              </div>
+                              <div className="flex justify-between border-b border-[#F4F4F5] pb-1.5">
+                                <span>Self-report vs observed gap:</span>
+                                <span className={`font-semibold ${patient.discrepancyD > 3.5 ? 'text-rose-600 font-bold' : 'text-[#09090B]'}`}>
+                                  {patient.discrepancyD.toFixed(1)} {patient.discrepancyD > 3.5 && '(Elevated)'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Prior medical records:</span>
+                                <span className="font-semibold text-[#09090B]">{patient.history.length} Flagged</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Column 3: Clinical Summary */}
+                          <div className="bg-white p-4 rounded-lg border border-[#E4E4E7] shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+                            <div>
+                              <h4 className="font-semibold text-xs text-[#09090B] uppercase tracking-wider font-mono mb-2">
+                                Clinical Assessment Summary
+                              </h4>
+                              <p className="text-xs text-[#52525B] leading-relaxed font-sans">
+                                {patient.xaiSummary}
+                              </p>
+                            </div>
+                            
+                            <div className="pt-4 border-t border-[#F4F4F5] flex justify-between items-center gap-2">
+                              <span className="text-[11px] font-mono text-[#71717A]">Verified Code</span>
+                              <div className="flex items-center gap-2">
+                                <Link 
+                                  href={`/clinical/records/${patient.id}`}
+                                  className="border border-[#E4E4E7] hover:bg-[#F4F4F5] text-[#27272A] text-xs font-medium px-2.5 py-1.5 rounded-lg transition-all flex items-center"
+                                >
+                                  <FileText className="w-3.5 h-3.5 mr-1 text-[#71717A]" strokeWidth={1.75} /> Chart
+                                </Link>
+                                <Link 
+                                  href={`/clinical/consult/${patient.id}`}
+                                  className="bg-[#0066FF] hover:bg-[#0052CC] text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-all shadow-sm flex items-center"
+                                >
+                                  <Video className="w-3.5 h-3.5 mr-1" strokeWidth={1.75} /> Enter Room
+                                </Link>
+                              </div>
+                            </div>
+                          </div>
+
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </div>

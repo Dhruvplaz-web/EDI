@@ -1,123 +1,150 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Activity, Shield, Video } from 'lucide-react';
+import { Activity, Shield, Video, FileText, ArrowRight } from 'lucide-react';
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
-      <header className="border-b bg-white px-6 py-4 flex justify-between items-center shadow-sm">
-        <div className="flex items-center space-x-2">
-          <div className="bg-blue-600 p-2 rounded-lg text-white">
-            <Activity className="h-6 w-6" />
+    <div className="min-h-screen bg-[#F8F9FA] text-[#09090B] flex flex-col justify-between font-sans">
+      {/* Luxury Light Header */}
+      <header className="border-b border-[#E4E4E7] bg-white/95 backdrop-blur-md px-6 py-3.5 flex justify-between items-center sticky top-0 z-30 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+        <div className="flex items-center space-x-2.5">
+          <div className="w-8 h-8 rounded-lg bg-[#09090B] flex items-center justify-center text-white">
+            <Activity className="h-4 w-4" strokeWidth={1.75} />
           </div>
-          <span className="font-bold text-xl text-slate-900">XAI-Triage Tele-Psychiatry</span>
+          <div className="text-left">
+            <span className="font-bold text-sm tracking-tight text-[#09090B]">Praxis AI</span>
+            <span className="ml-2 text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#F4F4F5] text-[#52525B] border border-[#E4E4E7]">
+              Clinical Platform
+            </span>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <Link href="/patient/intake">
-            <Button variant="outline" className="text-teal-700 border-teal-200 bg-teal-50 hover:bg-teal-100 font-semibold text-xs">
-              Patient Intake
+            <Button variant="outline" className="border-[#E4E4E7] text-[#27272A] hover:bg-[#F4F4F5] text-xs font-medium rounded-lg h-8 px-3">
+              Patient Check-In
             </Button>
           </Link>
           <Link href="/login">
-            <Button variant="outline" className="text-xs font-semibold">Sign In</Button>
+            <Button variant="outline" className="border-[#E4E4E7] text-[#27272A] hover:bg-[#F4F4F5] text-xs font-medium rounded-lg h-8 px-3">
+              Sign In
+            </Button>
           </Link>
           <Link href="/api/dev-login?role=clinician">
-            <Button className="bg-[#1E1B4B] hover:bg-[#2E2A72] text-white text-xs font-bold shadow-md shadow-indigo-950/20">
+            <Button className="bg-[#0066FF] hover:bg-[#0052CC] text-white text-xs font-medium rounded-lg h-8 px-3.5 shadow-sm">
               Clinician Portal
             </Button>
           </Link>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-12 text-center space-y-8 flex-1">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-teal-50 text-teal-800 rounded-full text-xs font-mono font-bold border border-teal-200">
-          <span>Non-Device Clinical Decision Support (CDS)</span>
-          <span>•</span>
-          <span>FDA Section 520(o) Compliant</span>
+      {/* Main Content */}
+      <main className="max-w-5xl mx-auto px-6 py-14 space-y-10 flex-1 text-center">
+        {/* Status Pill */}
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#F0F6FF] text-[#0066FF] rounded-full text-xs font-mono font-medium border border-[#BFDBFE]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#0066FF] animate-pulse" />
+          <span>Clinical Decision Support System</span>
+          <span className="text-[#BFDBFE]">•</span>
+          <span>FDA Section 520(o) Notice Active</span>
         </div>
 
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight max-w-3xl mx-auto">
-          Praxis AI: Explainable Multimodal Tele-Psychiatry
-        </h1>
-        <p className="text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
-          Zero-cloud token deterministic signal processing and scaled dot-product cross-attention. Detects psychiatric symptom masking and emotional incongruence in real-time.
-        </p>
+        {/* Hero Typography */}
+        <div className="space-y-3 max-w-3xl mx-auto">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#09090B] leading-tight">
+            Objective Tele-Psychiatry & Clinical Decision Support
+          </h1>
+          <p className="text-sm sm:text-base text-[#52525B] max-w-2xl mx-auto leading-relaxed">
+            Real-time acoustic and facial signal analysis to support healthcare providers in identifying clinical stress and mood indicators during telehealth consultations.
+          </p>
+        </div>
 
         {/* 4 Interactive Portal Entrypoints */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
-          <Link href="/api/dev-login?role=clinician" className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-400 transition-all text-left group">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-              <Activity className="w-5 h-5" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-2 text-left">
+          <Link href="/api/dev-login?role=clinician" className="p-5 bg-white/95 backdrop-blur-sm rounded-xl border border-[#E4E4E7] shadow-[0_1px_3px_rgba(0,0,0,0.02),0_4px_16px_rgba(0,0,0,0.02)] hover:border-[#0066FF] hover:shadow-[0_2px_12px_rgba(0,102,255,0.08)] transition-all group">
+            <div className="w-9 h-9 rounded-lg bg-[#F0F6FF] text-[#0066FF] flex items-center justify-center mb-3 border border-[#BFDBFE]">
+              <Activity className="w-4 h-4" strokeWidth={1.75} />
             </div>
-            <h3 className="font-bold text-sm text-slate-900 mb-1">Clinician Triage Board</h3>
-            <p className="text-xs text-slate-500">Live WebRTC room, cross-attention radar HUD, and automated SOAP scribe.</p>
+            <h2 className="font-semibold text-sm text-[#09090B] mb-1 flex items-center justify-between">
+              Clinician Queue
+              <ArrowRight className="w-3.5 h-3.5 text-[#A1A1AA] group-hover:text-[#0066FF] transition-colors" />
+            </h2>
+            <p className="text-xs text-[#71717A] leading-relaxed">Prioritized patient intake, real-time video room, and clinical note drafts.</p>
           </Link>
 
-          <Link href="/patient/intake" className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-teal-400 transition-all text-left group">
-            <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-              <Video className="w-5 h-5" />
+          <Link href="/patient/intake" className="p-5 bg-white/95 backdrop-blur-sm rounded-xl border border-[#E4E4E7] shadow-[0_1px_3px_rgba(0,0,0,0.02),0_4px_16px_rgba(0,0,0,0.02)] hover:border-[#0066FF] hover:shadow-[0_2px_12px_rgba(0,102,255,0.08)] transition-all group">
+            <div className="w-9 h-9 rounded-lg bg-[#F4F4F5] text-[#27272A] flex items-center justify-center mb-3 border border-[#E4E4E7]">
+              <Video className="w-4 h-4" strokeWidth={1.75} />
             </div>
-            <h3 className="font-bold text-sm text-slate-900 mb-1">Patient Check-In</h3>
-            <p className="text-xs text-slate-500">PHQ-9 screening, box breathing bio-feedback, and 15s baseline calibration.</p>
+            <h2 className="font-semibold text-sm text-[#09090B] mb-1 flex items-center justify-between">
+              Patient Check-In
+              <ArrowRight className="w-3.5 h-3.5 text-[#A1A1AA] group-hover:text-[#0066FF] transition-colors" />
+            </h2>
+            <p className="text-xs text-[#71717A] leading-relaxed">Intake questionnaires, guided breathing exercises, and baseline check-in.</p>
           </Link>
 
-          <Link href="/api/dev-login?role=patient" className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-400 transition-all text-left group">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-              <Shield className="w-5 h-5" />
+          <Link href="/api/dev-login?role=patient" className="p-5 bg-white/95 backdrop-blur-sm rounded-xl border border-[#E4E4E7] shadow-[0_1px_3px_rgba(0,0,0,0.02),0_4px_16px_rgba(0,0,0,0.02)] hover:border-[#0066FF] hover:shadow-[0_2px_12px_rgba(0,102,255,0.08)] transition-all group">
+            <div className="w-9 h-9 rounded-lg bg-[#F4F4F5] text-[#27272A] flex items-center justify-center mb-3 border border-[#E4E4E7]">
+              <Shield className="w-4 h-4" strokeWidth={1.75} />
             </div>
-            <h3 className="font-bold text-sm text-slate-900 mb-1">Patient Portal (PHR)</h3>
-            <p className="text-xs text-slate-500">Personal health records, acoustic mood journaling, and telehealth consults.</p>
+            <h2 className="font-semibold text-sm text-[#09090B] mb-1 flex items-center justify-between">
+              Patient Portal
+              <ArrowRight className="w-3.5 h-3.5 text-[#A1A1AA] group-hover:text-[#0066FF] transition-colors" />
+            </h2>
+            <p className="text-xs text-[#71717A] leading-relaxed">Personal health summary, symptom tracking records, and past visits.</p>
           </Link>
 
-          <Link href="/api/dev-login?role=billing_admin" className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-400 transition-all text-left group">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-              <Activity className="w-5 h-5 text-blue-600" />
+          <Link href="/api/dev-login?role=billing_admin" className="p-5 bg-white/95 backdrop-blur-sm rounded-xl border border-[#E4E4E7] shadow-[0_1px_3px_rgba(0,0,0,0.02),0_4px_16px_rgba(0,0,0,0.02)] hover:border-[#0066FF] hover:shadow-[0_2px_12px_rgba(0,102,255,0.08)] transition-all group">
+            <div className="w-9 h-9 rounded-lg bg-[#F4F4F5] text-[#27272A] flex items-center justify-center mb-3 border border-[#E4E4E7]">
+              <FileText className="w-4 h-4" strokeWidth={1.75} />
             </div>
-            <h3 className="font-bold text-sm text-slate-900 mb-1">Operations & Billing</h3>
-            <p className="text-xs text-slate-500">Audit trail compliance logs, CPT code billing, and clinic operations.</p>
+            <h2 className="font-semibold text-sm text-[#09090B] mb-1 flex items-center justify-between">
+              Administration
+              <ArrowRight className="w-3.5 h-3.5 text-[#A1A1AA] group-hover:text-[#0066FF] transition-colors" />
+            </h2>
+            <p className="text-xs text-[#71717A] leading-relaxed">Clinic compliance audit logs, billing code tracking, and user management.</p>
           </Link>
         </div>
 
-        {/* Technology Highlights */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6 text-left">
-          <Card className="rounded-2xl border-slate-200">
-            <CardHeader>
-              <Video className="h-6 w-6 text-indigo-600 mb-1" />
-              <CardTitle className="text-sm font-bold">Local AudioWorklet DSP</CardTitle>
-              <CardDescription className="text-xs">
-                Glottal period perturbation (RAP jitter) and shimmer calculated directly on the client, overcoming Opus codec distortion.
+        {/* Technology Architecture Highlights */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 text-left">
+          <Card className="rounded-xl border border-[#E4E4E7] bg-white/95 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+            <CardHeader className="p-5">
+              <Video className="h-5 w-5 text-[#0066FF] mb-2" strokeWidth={1.75} />
+              <CardTitle className="text-sm font-semibold text-[#09090B]">Local Audio Processing</CardTitle>
+              <CardDescription className="text-xs text-[#71717A] leading-relaxed">
+                Vocal jitter and pitch variations are computed directly inside the browser with zero external server audio transmission.
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="rounded-2xl border-slate-200">
-            <CardHeader>
-              <Activity className="h-6 w-6 text-teal-600 mb-1" />
-              <CardTitle className="text-sm font-bold">Cross-Attention Fusion</CardTitle>
-              <CardDescription className="text-xs">
-                True scaled dot-product attention Softmax(QKᵀ / √d)V correlating micro-expressions with vocal tremor.
+          <Card className="rounded-xl border border-[#E4E4E7] bg-white/95 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+            <CardHeader className="p-5">
+              <Activity className="h-5 w-5 text-[#0066FF] mb-2" strokeWidth={1.75} />
+              <CardTitle className="text-sm font-semibold text-[#09090B]">Multi-Signal Correlation</CardTitle>
+              <CardDescription className="text-xs text-[#71717A] leading-relaxed">
+                Correlates facial micro-movement patterns with vocal acoustics to provide objective assistance to the clinician.
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="rounded-2xl border-slate-200">
-            <CardHeader>
-              <Shield className="h-6 w-6 text-amber-600 mb-1" />
-              <CardTitle className="text-sm font-bold">DAIC-WOZ Ground Truth</CardTitle>
-              <CardDescription className="text-xs">
-                Empirical benchmark suite achieving 100% sensitivity on masked incongruence versus 0% for unimodal NLP.
+          <Card className="rounded-xl border border-[#E4E4E7] bg-white/95 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+            <CardHeader className="p-5">
+              <Shield className="h-5 w-5 text-[#0066FF] mb-2" strokeWidth={1.75} />
+              <CardTitle className="text-sm font-semibold text-[#09090B]">Clinical Dataset Validation</CardTitle>
+              <CardDescription className="text-xs text-[#71717A] leading-relaxed">
+                Validated against clinical psychiatry benchmarks to ensure consistent and reliable decision-support telemetry.
               </CardDescription>
             </CardHeader>
           </Card>
         </div>
       </main>
 
-      <footer className="border-t bg-white py-6 text-center text-xs text-slate-500 space-y-2">
-        <p className="font-medium text-slate-700">© 2026 Praxis AI (XAI-Triage Tele-Psychiatry Platform).</p>
-        <p className="max-w-3xl mx-auto text-[11px] text-slate-400">
-          Statutory Notice: Praxis AI operates strictly as a non-device Clinical Decision Support (CDS) platform compliant with FDA Section 520(o)(1)(E) and CDSCO/DISHA telehealth standards. Autonomous medical diagnoses are prohibited; all biomarker analyses and automated SOAP summaries require licensed clinician review.
+      {/* Luxury Light Footer */}
+      <footer className="border-t border-[#E4E4E7] bg-white py-6 text-center text-xs text-[#71717A] space-y-2">
+        <p className="font-medium text-[#27272A]">© 2026 Praxis AI • Clinical Tele-Psychiatry Platform</p>
+        <p className="max-w-3xl mx-auto text-[11px] text-[#A1A1AA] leading-relaxed px-4">
+          Statutory Notice: Praxis operates strictly as a non-device Clinical Decision Support (CDS) platform compliant with FDA Section 520(o). All acoustic measurements, facial metrics, and note drafts require independent review and approval by a licensed clinician.
         </p>
       </footer>
     </div>

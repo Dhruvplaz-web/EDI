@@ -61,107 +61,107 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-center items-center p-4 font-sans">
-      <div className="w-full max-w-lg space-y-6">
+    <div className="min-h-screen bg-[#F8F9FA] flex flex-col justify-center items-center p-4 font-sans text-[#09090B]">
+      <div className="w-full max-w-md space-y-6">
 
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center space-y-3">
-          <div className="w-14 h-14 rounded-2xl bg-[#1E1B4B] flex items-center justify-center shadow-xl shadow-indigo-950/20">
-            <Activity className="w-8 h-8 text-teal-400" />
+          <div className="w-12 h-12 rounded-xl bg-[#09090B] flex items-center justify-center text-white shadow-sm">
+            <Activity className="w-6 h-6" strokeWidth={1.75} />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold text-[#0F172A] tracking-tight">Praxis AI</h1>
-            <p className="text-xs text-slate-500 font-medium mt-1">Clinical Tele-Psychiatry & Multimodal Decision-Support Portal</p>
+            <h1 className="text-2xl font-bold text-[#09090B] tracking-tight">Praxis AI</h1>
+            <p className="text-xs text-[#71717A] mt-0.5">Clinical Tele-Psychiatry & Decision-Support Portal</p>
           </div>
         </div>
 
         {/* Main Login Card */}
-        <Card className="bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-2xl shadow-slate-200/60 rounded-3xl overflow-hidden">
-          <CardHeader className="space-y-1 text-center bg-slate-50/60 border-b border-slate-200/80 p-6">
-            <CardTitle className="text-xl font-extrabold text-[#0F172A]">
-              Secure Healthcare Access
+        <Card className="bg-white/95 backdrop-blur-sm border border-[#E4E4E7] shadow-[0_1px_3px_rgba(0,0,0,0.02),0_8px_30px_rgba(0,0,0,0.03)] rounded-2xl overflow-hidden">
+          <CardHeader className="space-y-1 text-center bg-[#FAFAFA] border-b border-[#E4E4E7] p-5">
+            <CardTitle className="text-base font-bold text-[#09090B]">
+              Secure Clinical Sign In
             </CardTitle>
-            <CardDescription className="text-xs text-slate-500">
-              Enter your clinical credentials or test with one-click role access
+            <CardDescription className="text-xs text-[#71717A]">
+              Choose a clinical role or enter your verified credentials
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="p-6 space-y-6">
+          <CardContent className="p-6 space-y-5 text-left">
             {error && (
-              <div className="bg-rose-50 border-l-4 border-rose-500 p-3 text-xs text-rose-800 rounded font-mono">
+              <div className="bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700 rounded-lg font-mono">
                 {error}
               </div>
             )}
 
             {/* Direct One-Click Demo Access Buttons */}
             <div className="space-y-2">
-              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400">
-                Instant Demo Role Switcher
+              <label className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#71717A]">
+                Instant Demo Access
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleDevLogin('clinician')}
+                  className="flex items-center justify-center space-x-2 py-2 px-3 bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium text-xs rounded-lg transition-all shadow-sm active:scale-95"
+                >
+                  <Stethoscope className="w-3.5 h-3.5" strokeWidth={1.75} />
+                  <span>Clinician (Primary)</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => handleDevLogin('patient')}
-                  className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-800 font-semibold text-xs transition-all shadow-sm active:scale-95"
+                  className="flex items-center justify-center space-x-2 py-2 px-3 bg-white hover:bg-[#F4F4F5] border border-[#E4E4E7] rounded-lg text-[#27272A] font-medium text-xs transition-all shadow-sm active:scale-95"
                 >
-                  <User className="w-4 h-4 text-teal-600" />
+                  <User className="w-3.5 h-3.5 text-[#71717A]" strokeWidth={1.75} />
                   <span>Patient</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleDevLogin('clinician')}
-                  className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-[#1E1B4B] hover:bg-[#2E2A72] text-white font-semibold text-xs rounded-xl transition-all shadow-md shadow-indigo-950/20 active:scale-95"
-                >
-                  <Stethoscope className="w-4 h-4 text-teal-400" />
-                  <span>Clinician</span>
-                </button>
-
-                <button
-                  type="button"
                   onClick={() => handleDevLogin('billing_admin')}
-                  className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-800 font-semibold text-xs transition-all shadow-sm active:scale-95"
+                  className="flex items-center justify-center space-x-2 py-2 px-3 bg-white hover:bg-[#F4F4F5] border border-[#E4E4E7] rounded-lg text-[#27272A] font-medium text-xs transition-all shadow-sm active:scale-95"
                 >
-                  <Building2 className="w-4 h-4 text-blue-600" />
+                  <Building2 className="w-3.5 h-3.5 text-[#71717A]" strokeWidth={1.75} />
                   <span>Operations</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleDevLogin('admin')}
-                  className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl transition-all shadow-sm active:scale-95"
+                  className="flex items-center justify-center space-x-2 py-2 px-3 bg-[#18181B] hover:bg-[#27272A] text-white font-medium text-xs rounded-lg transition-all shadow-sm active:scale-95"
                 >
-                  <Terminal className="w-4 h-4 text-emerald-400" />
+                  <Terminal className="w-3.5 h-3.5" strokeWidth={1.75} />
                   <span>Admin Console</span>
                 </button>
               </div>
             </div>
 
-            <div className="relative flex items-center justify-center my-4">
-              <div className="border-t border-slate-200 w-full" />
-              <span className="bg-white px-3 text-[10px] font-mono text-slate-400 uppercase tracking-widest absolute">Or Standard EMR Auth</span>
+            <div className="relative flex items-center justify-center my-3">
+              <div className="border-t border-[#E4E4E7] w-full" />
+              <span className="bg-white px-2.5 text-[10px] font-mono text-[#A1A1AA] uppercase tracking-wider absolute">Or Standard Account</span>
             </div>
 
             {/* Standard Firebase Form */}
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700" htmlFor="email">
-                  Clinical Email Address
+            <form onSubmit={handleLogin} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-[#27272A]" htmlFor="email">
+                  Clinical Email
                 </label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="doctor@praxis.health"
+                  placeholder="clinician@praxis.health"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}
-                  className="bg-slate-50 border-slate-200 focus-visible:ring-[#1E1B4B] rounded-xl text-xs"
+                  className="bg-white border-[#E4E4E7] text-[#09090B] focus-visible:ring-[#0066FF] rounded-lg text-xs h-9"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700" htmlFor="password">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-[#27272A]" htmlFor="password">
                   Password
                 </label>
                 <Input
@@ -171,26 +171,26 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading}
-                  className="bg-slate-50 border-slate-200 focus-visible:ring-[#1E1B4B] rounded-xl text-xs"
+                  className="bg-white border-[#E4E4E7] text-[#09090B] focus-visible:ring-[#0066FF] rounded-lg text-xs h-9"
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full bg-[#1E1B4B] hover:bg-[#2E2A72] text-white font-bold py-3 rounded-xl transition-all text-xs shadow-md shadow-indigo-950/20"
+                className="w-full bg-[#09090B] hover:bg-[#27272A] text-white font-medium py-2 rounded-lg transition-all text-xs shadow-sm h-9"
                 disabled={isLoading}
               >
-                {isLoading ? 'Authenticating...' : 'Sign In with Firebase Auth'}
+                {isLoading ? 'Authenticating...' : 'Sign In with Email'}
               </Button>
             </form>
           </CardContent>
         </Card>
 
         {/* Security & Compliance Badges Footer */}
-        <div className="flex items-center justify-center space-x-6 text-[11px] font-mono text-slate-500">
-          <span className="flex items-center"><ShieldCheck className="w-3.5 h-3.5 mr-1 text-teal-600" /> HIPAA Compliant</span>
-          <span className="flex items-center"><Lock className="w-3.5 h-3.5 mr-1 text-teal-600" /> 256-bit AES</span>
-          <span className="flex items-center"><UserCheck className="w-3.5 h-3.5 mr-1 text-teal-600" /> Zero-Copy Edge Vision</span>
+        <div className="flex items-center justify-center space-x-5 text-[11px] font-mono text-[#71717A]">
+          <span className="flex items-center"><ShieldCheck className="w-3.5 h-3.5 mr-1 text-[#0066FF]" strokeWidth={1.75} /> HIPAA Protected</span>
+          <span className="flex items-center"><Lock className="w-3.5 h-3.5 mr-1 text-[#0066FF]" strokeWidth={1.75} /> 256-bit Encrypted</span>
+          <span className="flex items-center"><UserCheck className="w-3.5 h-3.5 mr-1 text-[#0066FF]" strokeWidth={1.75} /> Client Signal DSP</span>
         </div>
 
       </div>
