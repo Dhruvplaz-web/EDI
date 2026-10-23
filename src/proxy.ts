@@ -27,13 +27,18 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   
   // Public routes that don't need auth checking
-  if (pathname.startsWith('/_next') || pathname.startsWith('/api') || pathname === '/unauthorized') {
-    return NextResponse.next()
-  }
+  const isPublicRoute = 
+    pathname.startsWith('/_next') || 
+    pathname.startsWith('/api') || 
+    pathname.startsWith('/benchmarks') || 
+    pathname === '/unauthorized' ||
+    pathname === '/login' ||
+    pathname === '/patient/intake' ||
+    pathname === '/';
 
-  // If not authenticated, redirect to login (unless already on login)
+  // If not authenticated, redirect to login (unless on a public route)
   if (!session || !userRole) {
-    if (pathname !== '/login') {
+    if (!isPublicRoute) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
     return NextResponse.next()
@@ -50,8 +55,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // If visiting /login or root /, redirect to their dashboard
-  if (pathname === '/login' || pathname === '/') {
+  // If authenticated user visits /login, redirect to their role dashboard
+  if (pathname === '/login') {
     const dashboardUrl = defaultDashboardMapping[targetEnvironment]
     return NextResponse.redirect(new URL(dashboardUrl, request.url))
   }

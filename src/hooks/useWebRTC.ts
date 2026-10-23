@@ -53,7 +53,13 @@ export function useWebRTC(callId: string | undefined, role: 'clinician' | 'patie
 
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
-          audio: { echoCancellation: true, noiseSuppression: true }
+          audio: {
+            echoCancellation: true,
+            autoGainControl: false, // Preserves vocal amplitude perturbation (shimmer)
+            noiseSuppression: false, // Preserves vocal glottal cycles & micro-tremor (jitter)
+            channelCount: 1,
+            sampleRate: { ideal: 48000 }
+          }
         }).catch(err => {
           console.warn("UserMedia access fallback:", err.message);
           return null;

@@ -9,5 +9,16 @@ export async function GET(request: Request) {
   cookieStore.set("user_role", role, { path: '/' })
   cookieStore.set("session", "mock_session_token", { path: '/' })
 
-  return NextResponse.redirect(new URL("/", request.url))
+  const dashboardMap: Record<string, string> = {
+    clinician: '/clinical/queue',
+    patient: '/patient/dashboard',
+    billing_admin: '/operations/dashboard',
+    clinic_manager: '/operations/dashboard',
+    super_admin: '/admin/dashboard',
+    admin: '/admin/dashboard',
+    it_support: '/admin/dashboard'
+  }
+
+  const destination = dashboardMap[role] || '/clinical/queue'
+  return NextResponse.redirect(new URL(destination, request.url))
 }

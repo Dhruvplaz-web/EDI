@@ -18,6 +18,8 @@ export interface AcousticAnalysisHook {
   baselineF0: number;
   normalizedJitterRatio: number;
   normalizedShimmerRatio: number;
+  snrDb: number;
+  isLowSNR: boolean;
   startCalibration: (durationMs?: number) => void;
 }
 
@@ -69,6 +71,8 @@ export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAn
   const [baselineF0, setBaselineF0] = useState(120.0);
   const [normalizedJitterRatio, setNormalizedJitterRatio] = useState(1.0);
   const [normalizedShimmerRatio, setNormalizedShimmerRatio] = useState(1.0);
+  const [snrDb, setSnrDb] = useState(25.0);
+  const [isLowSNR, setIsLowSNR] = useState(false);
 
   const analyzerRef = useRef<AcousticSignalAnalyzer | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -155,6 +159,8 @@ export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAn
             setAcousticStressScore(result.acousticStressScore);
             setNormalizedJitterRatio(result.normalizedJitterRatio ?? 1.0);
             setNormalizedShimmerRatio(result.normalizedShimmerRatio ?? 1.0);
+            setSnrDb(result.snrDb);
+            setIsLowSNR(result.isLowSNR);
             setLatestResult(result);
           }
         };
@@ -243,6 +249,8 @@ export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAn
     baselineF0,
     normalizedJitterRatio,
     normalizedShimmerRatio,
+    snrDb,
+    isLowSNR,
     startCalibration
   };
 }

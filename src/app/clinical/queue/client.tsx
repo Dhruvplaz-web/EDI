@@ -393,6 +393,15 @@ export function TriageBoardClient({ role, canWriteNotes }: { role: string | unde
                     )}
 
                     <Link 
+                      href={`/clinical/records/${patient.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-xl text-xs font-semibold transition-all shadow-sm hidden sm:flex items-center"
+                      title="View Longitudinal Medical Chart"
+                    >
+                      <FileText className="w-3.5 h-3.5 mr-1 text-slate-500" /> EHR Chart
+                    </Link>
+
+                    <Link 
                       href={`/clinical/consult/${patient.id}`}
                       onClick={(e) => e.stopPropagation()}
                       className="bg-teal-700 hover:bg-teal-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition-all shadow-sm flex items-center"
@@ -478,14 +487,22 @@ export function TriageBoardClient({ role, canWriteNotes }: { role: string | unde
                             </p>
                           </div>
                           
-                          <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
+                          <div className="pt-4 border-t border-slate-100 flex justify-between items-center gap-2">
                             <span className="text-[11px] font-mono text-slate-500">ICD-11 Verified</span>
-                            <Link 
-                              href={`/clinical/consult/${patient.id}`}
-                              className="bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-sm"
-                            >
-                              Launch Tele-Consultation
-                            </Link>
+                            <div className="flex items-center gap-2">
+                              <Link 
+                                href={`/clinical/records/${patient.id}`}
+                                className="border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 rounded-xl transition-all shadow-sm flex items-center"
+                              >
+                                <FileText className="w-3.5 h-3.5 mr-1 text-slate-500" /> View EHR
+                              </Link>
+                              <Link 
+                                href={`/clinical/consult/${patient.id}`}
+                                className="bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center"
+                              >
+                                <Video className="w-3.5 h-3.5 mr-1.5" /> Launch Room
+                              </Link>
+                            </div>
                           </div>
                         </div>
 

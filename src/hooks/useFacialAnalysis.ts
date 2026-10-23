@@ -11,6 +11,8 @@ export interface FacialAnalysisHook {
   calibrationProgress: number;
   discrepancyAlert: boolean;
   discrepancyValue: number;
+  isPoseCentered: boolean;
+  headPose: { pitchDeg: number; yawDeg: number; rollDeg: number };
   startAnalysis: (videoElement: HTMLVideoElement) => void;
   stopAnalysis: () => number;
   calibrateBaseline: (videoElement: HTMLVideoElement, durationSec?: number) => Promise<void>;
@@ -28,6 +30,8 @@ export function useFacialAnalysis(): FacialAnalysisHook {
   const [calibrationProgress, setCalibrationProgress] = useState(0);
   const [discrepancyAlert, setDiscrepancyAlert] = useState(false);
   const [discrepancyValue, setDiscrepancyValue] = useState(0.0);
+  const [isPoseCentered, setIsPoseCentered] = useState(true);
+  const [headPose, setHeadPose] = useState({ pitchDeg: 0, yawDeg: 0, rollDeg: 0 });
 
   const signalEngineRef = useRef(new ClinicalSignalEngine());
   const workerRef = useRef<Worker | null>(null);
@@ -49,7 +53,20 @@ export function useFacialAnalysis(): FacialAnalysisHook {
         } else if (type === 'FRAME_PROCESSED' && payload) {
           const shapes = payload.blendshapes || {};
           const au4 = shapes['browDownLeft'] || shapes['browDownRight'] || shapes['browDown'] || 0;
-          const au15 = shapes['mouthFrownLeft'] || shapes['mouthFrownRight'] || shapes['mouthFrown'] || 0;
+          let au15 = shapes['mouthFrownLeft'] || shapes['mouthFrownRight'] || shapes['mouthFrown'] || 0;
+
+          if (payload.headPose) {
+            setIsPoseCentered(payload.headPose.isPoseCentered);
+            setHeadPose(payload.headPose);
+
+            // 3D Pose Foreshortening Compensation:
+            // When user looks down (pitch < -18°) or turns head (yaw > 20°),
+            // 2D distance between mouth corners and jaw decreases artificially.
+            // Attenuate uncompensated geometric skew when off-axis:
+            if (!payload.headPose.isPoseCentered) {
+              au15 *= 0.55; // Attenuate head-tilt pseudo-frown
+            }
+          }
 
           setAu4BrowDown(parseFloat(au4.toFixed(2)));
           setAu15MouthFrown(parseFloat(au15.toFixed(2)));
@@ -156,6 +173,8 @@ export function useFacialAnalysis(): FacialAnalysisHook {
     calibrationProgress,
     discrepancyAlert,
     discrepancyValue,
+    isPoseCentered,
+    headPose,
     startAnalysis,
     stopAnalysis,
     calibrateBaseline,

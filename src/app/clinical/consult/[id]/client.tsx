@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { 
   Video, Mic, MicOff, VideoOff, PhoneOff, FileText, ShieldAlert, 
   Sliders, UserPlus, Activity, Download, Settings, Users, TrendingUp, Pill, Home, PlayCircle,
-  MessageSquare
+  MessageSquare, Stethoscope
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -37,6 +37,7 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
   const [videoOn, setVideoOn] = useState(true)
   const [showEmsModal, setShowEmsModal] = useState(false)
   const [activeTab, setActiveTab] = useState('consult')
+  const [viewMode, setViewMode] = useState<'ambient' | 'diagnostic'>('ambient')
 
   // 1-Click Examiner Defense Simulation Controller State
   const [isSimulating, setIsSimulating] = useState(false)
@@ -57,7 +58,7 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
   const { localStream, remoteStream, toggleAudio, toggleVideo } = useWebRTC(patientId, 'clinician')
   const { 
     isLoaded, rawStressScore, emaStressScore, au4BrowDown, au15MouthFrown,
-    discrepancyAlert, discrepancyValue, startAnalysis, stopAnalysis, setStressWeights 
+    discrepancyAlert, discrepancyValue, isPoseCentered, headPose, startAnalysis, stopAnalysis, setStressWeights 
   } = useFacialAnalysis()
   const {
     pitchHz,
@@ -66,7 +67,9 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
     pitchVariance,
     isFlatAffect,
     isVoiced,
-    acousticStressScore
+    acousticStressScore,
+    snrDb,
+    isLowSNR
   } = useAcousticAnalysis(remoteStream)
   const {
     isListening: isTranscribing,
@@ -231,21 +234,65 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
           {/* Main Video Viewport (Uncramped Layout) */}
           <div className="relative w-full h-[520px] bg-slate-900 rounded-3xl overflow-hidden border-2 border-slate-200 shadow-2xl flex items-center justify-center">
             
-            {/* Modality Radar HUD Overlay */}
-            <ModalityRadarHUD
-              rawStress={fusionResult?.fusedSeverityScore ?? (isSimulating ? scenarioProfile.linguisticSeverity : rawStressScore)}
-              emaStress={fusionResult?.fusedSeverityScore ?? (isSimulating ? scenarioProfile.linguisticSeverity : emaStressScore)}
-              discrepancy={fusionResult?.discrepancyD ?? (isSimulating ? 3.8 : discrepancyValue)}
-              isAlertActive={fusionResult?.isMaskingAlertActive ?? (isSimulating && activeScenario === 'masked')}
-              au4BrowDown={effectiveAU4}
-              au15MouthFrown={effectiveAU15}
-              speechJitter={effectiveJitter}
-              pitchHz={effectivePitch}
-              pitchVariance={effectiveVariance}
-              isFlatAffect={effectiveFlatAffect}
-              isVoiced={effectiveVoiced}
-              attentionWeights={fusionResult?.attentionWeights}
-            />
+            {/* Ambient Scribing Mode vs Diagnostic HUD View Mode */}
+            {viewMode === 'diagnostic' ? (
+              <ModalityRadarHUD
+                rawStress={fusionResult?.fusedSeverityScore ?? (isSimulating ? scenarioProfile.linguisticSeverity : rawStressScore)}
+                emaStress={fusionResult?.fusedSeverityScore ?? (isSimulating ? scenarioProfile.linguisticSeverity : emaStressScore)}
+                discrepancy={fusionResult?.discrepancyD ?? (isSimulating ? 3.8 : discrepancyValue)}
+                isAlertActive={fusionResult?.isMaskingAlertActive ?? (isSimulating && activeScenario === 'masked')}
+                au4BrowDown={effectiveAU4}
+                au15MouthFrown={effectiveAU15}
+                speechJitter={effectiveJitter}
+                pitchHz={effectivePitch}
+                pitchVariance={effectiveVariance}
+                isFlatAffect={effectiveFlatAffect}
+                isVoiced={effectiveVoiced}
+                attentionWeights={fusionResult?.attentionWeights}
+              />
+            ) : (
+              /* Ambient Scribing Mode Floating Status Capsule (Clean, Rapport-Preserving) */
+              <div className="absolute top-6 right-6 z-20 flex flex-col items-end gap-2 max-w-sm pointer-events-auto">
+                <div className="flex items-center gap-2 bg-slate-900/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 shadow-lg text-xs font-mono">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-slate-200 font-medium">Ambient Scribe Active</span>
+                  <span className="text-slate-500">|</span>
+                  <span className="text-teal-400 font-semibold">
+                    Sev: {(fusionResult?.fusedSeverityScore ?? (isSimulating ? scenarioProfile.linguisticSeverity : emaStressScore)).toFixed(1)}/10
+                  </span>
+                  <button
+                    onClick={() => setViewMode('diagnostic')}
+                    className="ml-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-teal-300 px-2 py-0.5 rounded border border-slate-700 transition-colors"
+                  >
+                    View HUD
+                  </button>
+                </div>
+
+                {/* Subtle Discrepancy Alert Capsule if active */}
+                {(fusionResult?.isMaskingAlertActive ?? (isSimulating && activeScenario === 'masked')) && (
+                  <div className="flex items-center gap-1.5 bg-rose-950/90 backdrop-blur-md text-rose-300 border border-rose-800/80 px-3 py-1 rounded-full text-[11px] font-mono shadow-md animate-fade-in">
+                    <ShieldAlert className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                    <span>Discrepancy Alert D={(fusionResult?.discrepancyD ?? (isSimulating ? 3.8 : discrepancyValue)).toFixed(1)}</span>
+                  </div>
+                )}
+
+                {/* Ambient Acoustic Noise Interference Capsule if low SNR */}
+                {isLowSNR && (
+                  <div className="flex items-center gap-1.5 bg-amber-950/90 backdrop-blur-md text-amber-300 border border-amber-800/80 px-3 py-1 rounded-full text-[11px] font-mono shadow-md">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    <span>Acoustic SNR Low ({snrDb.toFixed(1)} dB) • Filtered</span>
+                  </div>
+                )}
+
+                {/* Off-axis Head Pose Compensated Capsule */}
+                {!isPoseCentered && (
+                  <div className="flex items-center gap-1.5 bg-indigo-950/90 backdrop-blur-md text-indigo-300 border border-indigo-800/80 px-3 py-1 rounded-full text-[11px] font-mono shadow-md">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                    <span>Pose Compensated (Pitch: {headPose.pitchDeg.toFixed(0)}°)</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <video 
               ref={remoteVideoRef} 
@@ -310,15 +357,45 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
           </div>
 
           {/* Control Bar & Quick Actions */}
-          <Card className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm flex items-center justify-between">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowEmsModal(true)}
-              className="bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100 text-xs font-bold shadow-sm"
-            >
-              <ShieldAlert className="w-4 h-4 mr-1.5 text-rose-600" /> 1-Click Crisis EMS Escalation
-            </Button>
+          <Card className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEmsModal(true)}
+                className="bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100 text-xs font-bold shadow-sm"
+              >
+                <ShieldAlert className="w-4 h-4 mr-1.5 text-rose-600" /> 1-Click Crisis EMS Escalation
+              </Button>
+
+              {/* View Mode Switcher: Ambient Scribe vs Diagnostic HUD */}
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <button
+                  onClick={() => setViewMode('ambient')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    viewMode === 'ambient' 
+                      ? 'bg-white text-blue-900 shadow-sm' 
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="Therapeutic Ambient Scribing Mode (zero visual distraction for rapport)"
+                >
+                  <Stethoscope className="w-3.5 h-3.5 text-teal-600" />
+                  Ambient
+                </button>
+                <button
+                  onClick={() => setViewMode('diagnostic')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    viewMode === 'diagnostic' 
+                      ? 'bg-blue-900 text-white shadow-sm' 
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="Diagnostic HUD Mode (full multimodal biomarker telemetry overlay)"
+                >
+                  <Activity className="w-3.5 h-3.5 text-teal-400" />
+                  Diagnostic HUD
+                </button>
+              </div>
+            </div>
 
             <div className="flex items-center space-x-4">
               <button 
@@ -343,6 +420,12 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
             </div>
 
             <div className="flex items-center space-x-3">
+              <Link
+                href={`/clinical/records/${patientId}`}
+                className="border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 rounded-xl transition-all shadow-sm flex items-center"
+              >
+                <FileText className="w-3.5 h-3.5 mr-1 text-slate-500" /> Patient Chart
+              </Link>
               <Button size="sm" onClick={() => setActiveTab('soap')} className="bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold">
                 Open SOAP Editor
               </Button>
@@ -361,6 +444,19 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
               onClear={clearTranscript}
               onSendToSOAP={() => setActiveTab('soap')}
             />
+          </div>
+
+          {/* Statutory FDA Section 520(o) CDS Compliance Disclosure */}
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-4 text-xs text-slate-600 flex items-start gap-3 shadow-sm">
+            <ShieldAlert className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-semibold text-slate-800">
+                FDA Section 520(o) Non-Device Clinical Decision Support (CDS) Statutory Notice
+              </p>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                This software provides acoustic jitter/shimmer DSP telemetry, facial Action Unit (AU4/AU15) kinematic analysis, and psychiatric speech cadence quantification to assist licensed clinicians in reviewing clinical markers. In accordance with the 21st Century Cures Act and FDA Section 520(o)(1)(E), this software is not an autonomous diagnostic device, does not establish psychiatric diagnoses, and does not replace professional clinical judgment. Licensed healthcare providers must independently evaluate patient history and all clinical findings prior to initiating or altering care plans.
+              </p>
+            </div>
           </div>
         </div>
       )}

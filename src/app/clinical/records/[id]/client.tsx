@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { motion } from "framer-motion"
-import { FileText, Save, Stethoscope, Pill, Beaker, CheckCircle2, ChevronLeft, ArrowLeft } from "lucide-react"
+import { FileText, Save, Stethoscope, Pill, Beaker, ArrowLeft, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { BENCHMARK_PATIENTS } from "@/lib/firebase/patient-service"
 
 export function ClinicalRecordClient({ 
   patientId, 
@@ -17,8 +17,9 @@ export function ClinicalRecordClient({
   canPrescribe: boolean, 
   canOrderLabs: boolean 
 }) {
-  const [activeTab, setActiveTab] = useState("notes")
   const [saving, setSaving] = useState(false)
+
+  const patient = BENCHMARK_PATIENTS.find(p => p.id === patientId) || BENCHMARK_PATIENTS[0]
 
   const handleSave = () => {
     setSaving(true)
@@ -34,12 +35,16 @@ export function ClinicalRecordClient({
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold flex items-center gap-2">Jane Doe <span className="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500 ml-2">{patientId}</span></h1>
-            <p className="text-sm text-slate-500">34y • F • DOB: 05/12/1992</p>
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              {patient.fullName} 
+              <span className="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500 ml-2">{patient.id}</span>
+              <span className="text-xs font-mono bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200">{patient.icd11Code}</span>
+            </h1>
+            <p className="text-sm text-slate-500">{patient.age}y • {patient.gender} • {patient.primaryDiagnosis}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Link href={`/clinical/consult/${patientId}`} className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2 text-sm">
+          <Link href={`/clinical/consult/${patient.id}`} className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2 text-sm">
             <Stethoscope className="w-4 h-4" /> Start Telehealth
           </Link>
           {canWriteNotes && (
@@ -86,7 +91,7 @@ export function ClinicalRecordClient({
                       disabled={!canWriteNotes}
                       className="w-full min-h-[200px] p-4 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-60 resize-y"
                       placeholder={canWriteNotes ? "Enter History of Present Illness..." : "Read-only mode."}
-                      defaultValue="Patient reports a mild headache persisting for 3 days. No visual changes. Mild photophobia noted."
+                      defaultValue={`Patient ${patient.fullName} (${patient.age}y ${patient.gender}) presents with clinical indicators consistent with ${patient.primaryDiagnosis}. Baseline PHQ-9: ${patient.baselinePHQ9}/27, GAD-7: ${patient.baselineGAD7}/21. Chief complaint: ${patient.chiefComplaint || 'Longitudinal monitoring'}. Medical history: ${patient.medicalHistory?.join(', ') || 'None reported'}.`}
                     />
                   </div>
                   <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
@@ -95,25 +100,21 @@ export function ClinicalRecordClient({
                       disabled={!canWriteNotes}
                       className="w-full min-h-[150px] p-4 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-60 resize-y"
                       placeholder={canWriteNotes ? "Enter diagnosis and treatment plan..." : "Read-only mode."}
+                      defaultValue={`Primary Assessment: ${patient.primaryDiagnosis} (${patient.icd11Code}). Multimodal telemetry active via Praxis CDS engine. Continue current therapeutic protocol with bi-weekly acoustic and facial kinematic screening.`}
                     />
                   </div>
                 </div>
                 <div>
                   <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900 rounded-xl p-6 shadow-sm sticky top-6">
-                    <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-4">ICD-10 Diagnostic Codes</h3>
-                    {canWriteNotes ? (
-                      <div className="space-y-4">
-                        <input type="text" placeholder="Search ICD-10..." className="w-full px-3 py-2 rounded-md bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-2 rounded border border-blue-100 dark:border-blue-800 text-sm">
-                            <span className="font-medium text-blue-700 dark:text-blue-400">R51.9 - Headache, unspecified</span>
-                            <button className="text-slate-400 hover:text-red-500 transition-colors">&times;</button>
-                          </div>
+                    <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-4">Assigned Diagnostic Codes</h3>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-blue-200 dark:border-blue-800 text-xs shadow-sm">
+                          <span className="font-bold text-blue-800 dark:text-blue-300">{patient.icd11Code} - {patient.primaryDiagnosis}</span>
+                          <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono font-bold">Primary</span>
                         </div>
                       </div>
-                    ) : (
-                      <p className="text-sm text-slate-600 dark:text-slate-400 italic">No codes assigned yet.</p>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -177,5 +178,3 @@ export function ClinicalRecordClient({
     </div>
   )
 }
-// Temporary import for the component above
-import { AlertTriangle } from "lucide-react"

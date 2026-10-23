@@ -21,6 +21,10 @@ export interface AcousticFrameResult {
   normalizedJitterRatio?: number;
   normalizedShimmerRatio?: number;
   normalizedVarianceRatio?: number;
+  // Ambient room acoustic telemetry (Noise floor & SNR tracking)
+  estimatedNoiseFloorRms: number;
+  snrDb: number;
+  isLowSNR: boolean;
 }
 
 export interface AcousticBaseline {
@@ -58,6 +62,7 @@ export class AcousticSignalAnalyzer {
   private calibrationSamples: { f0: number; jitter: number; shimmer: number; variance: number }[] = [];
   private calibrationDurationMs: number = 15000;
   private calibrationStartTime: number | null = null;
+  private noiseFloorRms: number = 0.005; // Leaky tracking of background noise floor
 
   constructor(sampleRate: number = 48000) {
     this.sampleRate = sampleRate;
@@ -277,6 +282,16 @@ export class AcousticSignalAnalyzer {
     // Composite acoustic stress index [1.0, 10.0]
     const acousticStressScore = this.computeAcousticStress(jitter, shimmer, isFlatAffect, normalizedJitterRatio, normalizedShimmerRatio);
 
+    // Dynamic noise floor tracking: update noise floor on unvoiced/silence frames
+    if (!isVoiced || !isLoudEnough) {
+      this.noiseFloorRms = 0.95 * this.noiseFloorRms + 0.05 * Math.max(rms, 0.001);
+    }
+
+    // Signal-to-Noise Ratio (SNR) in decibels: 20 * log10(RMS_signal / RMS_noise)
+    const effectiveNoiseFloor = Math.max(this.noiseFloorRms, 0.001);
+    const snrDb = parseFloat((20 * Math.log10(Math.max(rms, 0.001) / effectiveNoiseFloor)).toFixed(1));
+    const isLowSNR = isVoiced && snrDb < 10.0; // SNR < 10 dB indicates heavy ambient interference (fans/traffic)
+
     return {
       timestamp,
       pitchHz: isVoiced ? parseFloat(f0.toFixed(1)) : 0,
@@ -289,7 +304,10 @@ export class AcousticSignalAnalyzer {
       acousticStressScore: parseFloat(acousticStressScore.toFixed(1)),
       normalizedJitterRatio,
       normalizedShimmerRatio,
-      normalizedVarianceRatio
+      normalizedVarianceRatio,
+      estimatedNoiseFloorRms: parseFloat(effectiveNoiseFloor.toFixed(4)),
+      snrDb,
+      isLowSNR
     };
   }
 

@@ -22,6 +22,7 @@ self.onmessage = async (e: MessageEvent) => {
           delegate: 'GPU'
         },
         outputFaceBlendshapes: true,
+        outputFacialTransformationMatrixes: true,
         runningMode: 'VIDEO',
         numFaces: 1
       });
@@ -49,11 +50,33 @@ self.onmessage = async (e: MessageEvent) => {
         }
       }
 
+      // Compute 3D Head Pose Euler Angles to reject foreshortening AU15 false positives
+      let pitchDeg = 0;
+      let yawDeg = 0;
+      let rollDeg = 0;
+      let isPoseCentered = true;
+
+      if (results.facialTransformationMatrixes && results.facialTransformationMatrixes.length > 0) {
+        const m = results.facialTransformationMatrixes[0].data;
+        if (m && m.length >= 16) {
+          pitchDeg = Math.asin(Math.max(-1, Math.min(1, -m[9]))) * (180 / Math.PI);
+          yawDeg = Math.atan2(m[8], m[10]) * (180 / Math.PI);
+          rollDeg = Math.atan2(m[1], m[5]) * (180 / Math.PI);
+          isPoseCentered = Math.abs(pitchDeg) < 22 && Math.abs(yawDeg) < 22;
+        }
+      }
+
       self.postMessage({
         type: 'FRAME_PROCESSED',
         payload: {
           timestamp,
           blendshapes: extractedShapes,
+          headPose: {
+            pitchDeg: Math.round(pitchDeg),
+            yawDeg: Math.round(yawDeg),
+            rollDeg: Math.round(rollDeg),
+            isPoseCentered
+          },
           landmarksCount: results.faceLandmarks ? results.faceLandmarks.length : 0
         }
       });

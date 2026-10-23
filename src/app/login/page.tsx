@@ -9,7 +9,7 @@ import { createSession } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Activity, ShieldCheck, Lock, UserCheck, Stethoscope, User } from 'lucide-react'
+import { Activity, ShieldCheck, Lock, UserCheck, Stethoscope, User, Building2, Terminal } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -56,7 +56,7 @@ export default function LoginPage() {
     }
   }
 
-  const handleDevLogin = (role: 'patient' | 'clinician' | 'admin') => {
+  const handleDevLogin = (role: 'patient' | 'clinician' | 'billing_admin' | 'admin') => {
     window.location.href = `/api/dev-login?role=${role}`
   }
 
@@ -102,19 +102,37 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => handleDevLogin('patient')}
-                  className="flex items-center justify-center space-x-2 py-3 px-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl text-slate-800 font-semibold text-xs transition-all shadow-sm active:scale-95"
+                  className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-800 font-semibold text-xs transition-all shadow-sm active:scale-95"
                 >
                   <User className="w-4 h-4 text-teal-600" />
-                  <span>Login as Patient</span>
+                  <span>Patient</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleDevLogin('clinician')}
-                  className="flex items-center justify-center space-x-2 py-3 px-4 bg-[#1E1B4B] hover:bg-[#2E2A72] text-white font-semibold text-xs rounded-2xl transition-all shadow-md shadow-indigo-950/20 active:scale-95"
+                  className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-[#1E1B4B] hover:bg-[#2E2A72] text-white font-semibold text-xs rounded-xl transition-all shadow-md shadow-indigo-950/20 active:scale-95"
                 >
                   <Stethoscope className="w-4 h-4 text-teal-400" />
-                  <span>Login as Clinician</span>
+                  <span>Clinician</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDevLogin('billing_admin')}
+                  className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-800 font-semibold text-xs transition-all shadow-sm active:scale-95"
+                >
+                  <Building2 className="w-4 h-4 text-blue-600" />
+                  <span>Operations</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDevLogin('admin')}
+                  className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl transition-all shadow-sm active:scale-95"
+                >
+                  <Terminal className="w-4 h-4 text-emerald-400" />
+                  <span>Admin Console</span>
                 </button>
               </div>
             </div>
