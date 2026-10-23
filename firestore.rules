@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // Helper function to check user role
+    function isRole(role) {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    // Define role-check shortcuts
+    function isPatient() { return isRole('patient'); }
+    function isGuardian() { return isRole('guardian'); }
+    function isMedicalAssistant() { return isRole('medical_assistant'); }
+    function isNurse() { return isRole('nurse'); }
+    function isClinician() { return isRole('clinician'); }
+    function isSpecialist() { return isRole('specialist'); }
+    function isBillingAdmin() { return isRole('billing_admin'); }
+    function isClinicManager() { return isRole('clinic_manager'); }
+    function isITSupport() { return isRole('it_support'); }
+    function isSuperAdmin() { return isRole('super_admin'); }
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Allow users to read their own profile so they can log in
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // ==========================================
+    // System & Auditing (Phase 3 Enterprise)
+    // ==========================================
+    
+    match /audit_logs/{logId} {
+      // Anyone logged in can create an audit log (append-only)
+      allow create: if request.auth != null;
+      // Only IT Support and Super Admins can read the audit logs
+      allow read: if isITSupport() || isSuperAdmin();
+      // No one can ever modify or delete an audit log
+      allow update, delete: if false;
+    }
+    
+    match /emergency_overrides/{overrideId} {
+      // Clinicians, Specialists, Nurses can trigger break-glass protocols
+      allow create: if isClinician() || isSpecialist() || isNurse();
+      // IT Support and Admins can view the active overrides
+      allow read: if isITSupport() || isSuperAdmin() || isClinician() || isSpecialist() || isNurse();
+      // Cannot delete overrides to maintain compliance
+      allow delete: if false;
+    }
+    
+    // ==========================================
+    // Core Collections (Placeholders)
+    // ==========================================
+    
+    // match /invoices/{invoiceId} {
+    //   // TODO: Add billing access rules
+    // }
+    
+    // match /appointments/{appointmentId} {
+    //   // TODO: Add scheduling access rules
+    // }
+    
+    match /intakes/{intakeId} {
+      allow read, write: if isClinician() || isPatient();
+    }
+  }
+}
