@@ -18,6 +18,18 @@ export interface AcousticFrameResult {
   pitchVariance: number;
   isFlatAffect: boolean;
   acousticStressScore: number; // 1.0 - 10.0
+  normalizedJitterRatio?: number;
+  normalizedShimmerRatio?: number;
+  normalizedVarianceRatio?: number;
+}
+
+export interface AcousticBaseline {
+  baselineF0: number;
+  baselineJitter: number;
+  baselineShimmer: number;
+  baselineVariance: number;
+  isCalibrated: boolean;
+  sampleCount: number;
 }
 
 export class AcousticSignalAnalyzer {
@@ -33,12 +45,50 @@ export class AcousticSignalAnalyzer {
   private f0History: number[] = [];
   private maxGlottalHistory: number = 60; // Store last 60 glottal cycles (~300-500ms of voice)
 
+  // 15-second individual acoustic baseline calibration (Opus codec & hardware invariant)
+  private baseline: AcousticBaseline = {
+    baselineF0: 120.0,
+    baselineJitter: 0.75,
+    baselineShimmer: 2.2,
+    baselineVariance: 40.0,
+    isCalibrated: false,
+    sampleCount: 0
+  };
+  private isCalibrating: boolean = false;
+  private calibrationSamples: { f0: number; jitter: number; shimmer: number; variance: number }[] = [];
+  private calibrationDurationMs: number = 15000;
+  private calibrationStartTime: number | null = null;
+
   constructor(sampleRate: number = 48000) {
     this.sampleRate = sampleRate;
   }
 
   public setSampleRate(sampleRate: number) {
     this.sampleRate = sampleRate;
+  }
+
+  public startCalibration(durationMs: number = 15000) {
+    this.isCalibrating = true;
+    this.calibrationDurationMs = durationMs;
+    this.calibrationStartTime = Date.now();
+    this.calibrationSamples = [];
+  }
+
+  public getCalibrationProgress(): { isCalibrating: boolean; progressPercent: number; isCalibrated: boolean } {
+    if (!this.isCalibrating || !this.calibrationStartTime) {
+      return { isCalibrating: false, progressPercent: this.baseline.isCalibrated ? 100 : 0, isCalibrated: this.baseline.isCalibrated };
+    }
+    const elapsed = Date.now() - this.calibrationStartTime;
+    const progress = Math.min(100, Math.round((elapsed / this.calibrationDurationMs) * 100));
+    return { isCalibrating: true, progressPercent: progress, isCalibrated: this.baseline.isCalibrated };
+  }
+
+  public getBaseline(): AcousticBaseline {
+    return { ...this.baseline };
+  }
+
+  public setBaseline(baseline: AcousticBaseline) {
+    this.baseline = { ...baseline };
   }
 
   /**
@@ -201,11 +251,31 @@ export class AcousticSignalAnalyzer {
     // Pitch variance
     const pitchVariance = this.computePitchVariance();
 
+    // Accumulate calibration statistics if within calibration window
+    if (this.isCalibrating && isVoiced && this.calibrationStartTime) {
+      this.calibrationSamples.push({ f0, jitter, shimmer, variance: pitchVariance });
+      const elapsed = Date.now() - this.calibrationStartTime;
+      if (elapsed >= this.calibrationDurationMs) {
+        this.finalizeCalibration();
+      }
+    }
+
     // Flat Affect detection: speech is voiced with low pitch variance (< 14 Hz) and low energy
     const isFlatAffect = this.f0History.length >= 8 && pitchVariance < 14.0 && rms < 0.12;
 
+    // Relative ratios against individual calibrated baseline
+    const normalizedJitterRatio = this.baseline.isCalibrated && this.baseline.baselineJitter > 0
+      ? parseFloat((jitter / this.baseline.baselineJitter).toFixed(2))
+      : 1.0;
+    const normalizedShimmerRatio = this.baseline.isCalibrated && this.baseline.baselineShimmer > 0
+      ? parseFloat((shimmer / this.baseline.baselineShimmer).toFixed(2))
+      : 1.0;
+    const normalizedVarianceRatio = this.baseline.isCalibrated && this.baseline.baselineVariance > 0
+      ? parseFloat((pitchVariance / this.baseline.baselineVariance).toFixed(2))
+      : 1.0;
+
     // Composite acoustic stress index [1.0, 10.0]
-    const acousticStressScore = this.computeAcousticStress(jitter, shimmer, isFlatAffect);
+    const acousticStressScore = this.computeAcousticStress(jitter, shimmer, isFlatAffect, normalizedJitterRatio, normalizedShimmerRatio);
 
     return {
       timestamp,
@@ -216,8 +286,31 @@ export class AcousticSignalAnalyzer {
       shimmerPercent: parseFloat(shimmer.toFixed(2)),
       pitchVariance: parseFloat(pitchVariance.toFixed(1)),
       isFlatAffect,
-      acousticStressScore: parseFloat(acousticStressScore.toFixed(1))
+      acousticStressScore: parseFloat(acousticStressScore.toFixed(1)),
+      normalizedJitterRatio,
+      normalizedShimmerRatio,
+      normalizedVarianceRatio
     };
+  }
+
+  private finalizeCalibration() {
+    this.isCalibrating = false;
+    if (this.calibrationSamples.length > 0) {
+      const count = this.calibrationSamples.length;
+      const sumF0 = this.calibrationSamples.reduce((acc, s) => acc + s.f0, 0);
+      const sumJitter = this.calibrationSamples.reduce((acc, s) => acc + s.jitter, 0);
+      const sumShimmer = this.calibrationSamples.reduce((acc, s) => acc + s.shimmer, 0);
+      const sumVar = this.calibrationSamples.reduce((acc, s) => acc + s.variance, 0);
+
+      this.baseline = {
+        baselineF0: parseFloat((sumF0 / count).toFixed(1)),
+        baselineJitter: parseFloat((sumJitter / count).toFixed(2)),
+        baselineShimmer: parseFloat((sumShimmer / count).toFixed(2)),
+        baselineVariance: parseFloat((sumVar / count).toFixed(1)),
+        isCalibrated: true,
+        sampleCount: count
+      };
+    }
   }
 
   /**
@@ -285,15 +378,28 @@ export class AcousticSignalAnalyzer {
   /**
    * Composite Stress: Jitter & Shimmer weighting
    */
-  private computeAcousticStress(jitter: number, shimmer: number, isFlatAffect: boolean): number {
+  private computeAcousticStress(
+    jitter: number,
+    shimmer: number,
+    isFlatAffect: boolean,
+    normJitterRatio: number = 1.0,
+    normShimmerRatio: number = 1.0
+  ): number {
     if (isFlatAffect) {
       return 7.5; // High depressive blunting risk
     }
 
-    const normJitter = Math.min(Math.max((jitter - 0.75) / 3.0, 0), 1.0);
-    const normShimmer = Math.min(Math.max((shimmer - 2.2) / 5.0, 0), 1.0);
+    const absoluteNormJitter = Math.min(Math.max((jitter - 0.75) / 3.0, 0), 1.0);
+    const absoluteNormShimmer = Math.min(Math.max((shimmer - 2.2) / 5.0, 0), 1.0);
 
-    const score = 1.0 + (9.0 * (0.6 * normJitter + 0.4 * normShimmer));
+    // If calibrated baseline exists, balance population normal with individual deviation
+    const relativeShiftJitter = Math.min(Math.max((normJitterRatio - 1.0) / 1.5, 0), 1.0);
+    const relativeShiftShimmer = Math.min(Math.max((normShimmerRatio - 1.0) / 1.5, 0), 1.0);
+
+    const effJitter = this.baseline.isCalibrated ? (0.5 * absoluteNormJitter + 0.5 * relativeShiftJitter) : absoluteNormJitter;
+    const effShimmer = this.baseline.isCalibrated ? (0.5 * absoluteNormShimmer + 0.5 * relativeShiftShimmer) : absoluteNormShimmer;
+
+    const score = 1.0 + (9.0 * (0.6 * effJitter + 0.4 * effShimmer));
     return Math.min(Math.max(score, 1.0), 10.0);
   }
 

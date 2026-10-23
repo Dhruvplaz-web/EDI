@@ -30,12 +30,17 @@ import { Card } from "@/components/ui/card"
 
 import { patientService, BENCHMARK_PATIENTS } from "@/lib/firebase/patient-service"
 import { PatientProfile } from "@/lib/firebase/schema"
+import { ClinicalSimulationController, SIMULATION_SCENARIOS, SimulationScenarioId } from "@/components/clinician/clinical-simulation-controller"
 
 export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId: string, canWriteNotes: boolean }) {
   const [micOn, setMicOn] = useState(true)
   const [videoOn, setVideoOn] = useState(true)
   const [showEmsModal, setShowEmsModal] = useState(false)
   const [activeTab, setActiveTab] = useState('consult')
+
+  // 1-Click Examiner Defense Simulation Controller State
+  const [isSimulating, setIsSimulating] = useState(false)
+  const [activeScenario, setActiveScenario] = useState<SimulationScenarioId>('masked')
 
   const fallbackPatient = BENCHMARK_PATIENTS.find(p => p.id === patientId) || BENCHMARK_PATIENTS[0]
   const [patient, setPatient] = useState<PatientProfile>(fallbackPatient)
@@ -78,36 +83,55 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
   const fusionEngineRef = useRef(new CrossAttentionFusionEngine())
   const [fusionResult, setFusionResult] = useState<CrossAttentionResult | null>(null)
 
+  // Multimodal Ground Truth Routing: WebRTC Hardware vs Deterministic Defense Simulator
+  const scenarioProfile = SIMULATION_SCENARIOS[activeScenario]
+  const effectiveAU4 = isSimulating ? scenarioProfile.au4BrowDown : au4BrowDown
+  const effectiveAU15 = isSimulating ? scenarioProfile.au15MouthFrown : au15MouthFrown
+  const effectivePitch = isSimulating ? scenarioProfile.pitchHz : pitchHz
+  const effectiveJitter = isSimulating ? scenarioProfile.jitterPercent : jitterPercent
+  const effectiveShimmer = isSimulating ? scenarioProfile.shimmerPercent : shimmerPercent
+  const effectiveVariance = isSimulating ? scenarioProfile.pitchVariance : pitchVariance
+  const effectiveFlatAffect = isSimulating ? scenarioProfile.isFlatAffect : isFlatAffect
+  const effectiveVoiced = isSimulating ? scenarioProfile.isVoiced : isVoiced
+  const effectiveWpm = isSimulating ? scenarioProfile.speechVelocityWpm : speechVelocityWpm
+  const effectiveLinguisticSeverity = isSimulating ? scenarioProfile.linguisticSeverity : linguisticSeverity
+  const effectiveCrisisAlert = isSimulating ? scenarioProfile.crisisAlert : crisisAlert
+  const effectiveSentiment = isSimulating ? scenarioProfile.sentimentPolarity : (latestAnalysis?.sentimentPolarity || 0)
+  const effectiveSubjective = isSimulating 
+    ? scenarioProfile.subjectiveScore 
+    : (patient.baselinePHQ9 > 0 ? (patient.baselinePHQ9 / 2.7) : 5.0)
+
   useEffect(() => {
     const res = fusionEngineRef.current.fuse(
       {
-        au4BrowDown,
-        au15MouthFrown,
+        au4BrowDown: effectiveAU4,
+        au15MouthFrown: effectiveAU15,
         blinkRate: 0.15,
-        sustainedFrownRate: au4BrowDown > 0.4 ? 0.6 : 0.1
+        sustainedFrownRate: effectiveAU4 > 0.4 ? 0.6 : 0.1
       },
       {
-        pitchHz,
-        jitterPercent,
-        shimmerPercent,
-        pitchVariance,
-        isFlatAffect,
-        isVoiced
+        pitchHz: effectivePitch,
+        jitterPercent: effectiveJitter,
+        shimmerPercent: effectiveShimmer,
+        pitchVariance: effectiveVariance,
+        isFlatAffect: effectiveFlatAffect,
+        isVoiced: effectiveVoiced
       },
       {
-        linguisticSeverity,
-        sentimentPolarity: latestAnalysis?.sentimentPolarity || 0,
-        speechVelocityWpm,
-        isCrisisAlert: crisisAlert,
-        flaggedTokenCount: latestAnalysis?.flaggedTokens?.length || 0
+        linguisticSeverity: effectiveLinguisticSeverity,
+        sentimentPolarity: effectiveSentiment,
+        speechVelocityWpm: effectiveWpm,
+        isCrisisAlert: effectiveCrisisAlert,
+        flaggedTokenCount: isSimulating ? scenarioProfile.flaggedTokens.length : (latestAnalysis?.flaggedTokens?.length || 0)
       },
-      patient.baselinePHQ9 > 0 ? (patient.baselinePHQ9 / 2.7) : 5.0
+      effectiveSubjective
     )
     setFusionResult(res)
   }, [
-    au4BrowDown, au15MouthFrown, pitchHz, jitterPercent, shimmerPercent,
-    pitchVariance, isFlatAffect, isVoiced, linguisticSeverity, speechVelocityWpm,
-    crisisAlert, latestAnalysis, patient.baselinePHQ9
+    effectiveAU4, effectiveAU15, effectivePitch, effectiveJitter, effectiveShimmer,
+    effectiveVariance, effectiveFlatAffect, effectiveVoiced, effectiveLinguisticSeverity,
+    effectiveSentiment, effectiveWpm, effectiveCrisisAlert, isSimulating, scenarioProfile,
+    latestAnalysis, effectiveSubjective
   ])
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
@@ -196,22 +220,30 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
       {/* Tab: Active Consultation Stream View */}
       {activeTab === 'consult' && (
         <div className="space-y-6 font-sans">
+          {/* Defense Simulator Controller Bar */}
+          <ClinicalSimulationController
+            isSimulating={isSimulating}
+            onToggleSimulating={setIsSimulating}
+            activeScenario={activeScenario}
+            onSelectScenario={setActiveScenario}
+          />
+
           {/* Main Video Viewport (Uncramped Layout) */}
           <div className="relative w-full h-[520px] bg-slate-900 rounded-3xl overflow-hidden border-2 border-slate-200 shadow-2xl flex items-center justify-center">
             
             {/* Modality Radar HUD Overlay */}
             <ModalityRadarHUD
-              rawStress={fusionResult?.fusedSeverityScore ?? rawStressScore}
-              emaStress={fusionResult?.fusedSeverityScore ?? emaStressScore}
-              discrepancy={fusionResult?.discrepancyD ?? discrepancyValue}
-              isAlertActive={fusionResult?.isMaskingAlertActive ?? discrepancyAlert}
-              au4BrowDown={au4BrowDown}
-              au15MouthFrown={au15MouthFrown}
-              speechJitter={jitterPercent}
-              pitchHz={pitchHz}
-              pitchVariance={pitchVariance}
-              isFlatAffect={isFlatAffect}
-              isVoiced={isVoiced}
+              rawStress={fusionResult?.fusedSeverityScore ?? (isSimulating ? scenarioProfile.linguisticSeverity : rawStressScore)}
+              emaStress={fusionResult?.fusedSeverityScore ?? (isSimulating ? scenarioProfile.linguisticSeverity : emaStressScore)}
+              discrepancy={fusionResult?.discrepancyD ?? (isSimulating ? 3.8 : discrepancyValue)}
+              isAlertActive={fusionResult?.isMaskingAlertActive ?? (isSimulating && activeScenario === 'masked')}
+              au4BrowDown={effectiveAU4}
+              au15MouthFrown={effectiveAU15}
+              speechJitter={effectiveJitter}
+              pitchHz={effectivePitch}
+              pitchVariance={effectiveVariance}
+              isFlatAffect={effectiveFlatAffect}
+              isVoiced={effectiveVoiced}
               attentionWeights={fusionResult?.attentionWeights}
             />
 
@@ -221,10 +253,47 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
               playsInline 
               className="w-full h-full object-cover"
             />
-            {!remoteStream && (
+
+            {!remoteStream && isSimulating && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 p-6 text-slate-300">
+                <div className="relative w-44 h-44 border border-teal-500/40 rounded-full flex items-center justify-center mb-4 bg-teal-950/30 shadow-2xl ring-4 ring-teal-500/10">
+                  {/* Eye landmark points */}
+                  <div className="absolute top-12 left-10 w-2.5 h-2.5 rounded-full bg-teal-400 animate-pulse" />
+                  <div className="absolute top-12 right-10 w-2.5 h-2.5 rounded-full bg-teal-400 animate-pulse" />
+                  
+                  {/* Eyebrows AU4 Brow Lowerer */}
+                  <div 
+                    className="absolute top-14 w-28 h-1 bg-amber-400 rounded transition-all duration-300"
+                    style={{ transform: `scaleY(${1 + effectiveAU4 * 3}) translateY(${effectiveAU4 * 6}px)` }}
+                  />
+
+                  {/* Mouth Depressor Anguli Oris AU15 */}
+                  <div 
+                    className="absolute bottom-12 w-20 h-1.5 bg-rose-400 rounded-full transition-all duration-300"
+                    style={{ transform: `scaleX(${1.2 - effectiveAU15 * 0.4}) translateY(${effectiveAU15 * 8}px)` }}
+                  />
+
+                  <div className="text-[10px] font-mono text-teal-300 font-bold uppercase tracking-wider text-center mt-28">
+                    {scenarioProfile.badge}
+                  </div>
+                </div>
+
+                <div className="text-center max-w-lg">
+                  <p className="text-xs font-mono text-teal-300 mb-1.5 font-bold bg-slate-950/80 px-3 py-1.5 rounded-lg border border-teal-500/30">
+                    &ldquo;{scenarioProfile.samplePhrase}&rdquo;
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    Multimodal Attention Vector: F0={effectivePitch} Hz • Jitter={effectiveJitter}% • Shimmer={effectiveShimmer}%
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!remoteStream && !isSimulating && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-900 space-y-3">
                 <Activity className="w-12 h-12 animate-pulse text-teal-500" />
                 <p className="text-sm font-semibold text-slate-200">Connecting WebRTC Stream for {patient.fullName}...</p>
+                <p className="text-xs text-slate-400">Click &ldquo;Launch Examiner Defense Simulator&rdquo; above for 1-click test with zero webcam required.</p>
               </div>
             )}
 

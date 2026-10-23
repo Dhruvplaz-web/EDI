@@ -12,7 +12,44 @@ export interface AcousticAnalysisHook {
   isFlatAffect: boolean;
   acousticStressScore: number;
   latestResult: AcousticFrameResult | null;
+  isCalibrating: boolean;
+  isCalibrated: boolean;
+  calibrationProgress: number;
+  baselineF0: number;
+  normalizedJitterRatio: number;
+  normalizedShimmerRatio: number;
+  startCalibration: (durationMs?: number) => void;
 }
+
+// Inline AudioWorklet processor code executed on dedicated audio rendering thread
+const AUDIO_WORKLET_CODE = `
+class AcousticWorkletProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.bufferSize = 2048;
+    this.buffer = new Float32Array(this.bufferSize);
+    this.bufferIndex = 0;
+  }
+
+  process(inputs, outputs, parameters) {
+    const input = inputs[0];
+    if (!input || input.length === 0) return true;
+    const channelData = input[0];
+    if (!channelData) return true;
+
+    for (let i = 0; i < channelData.length; i++) {
+      this.buffer[this.bufferIndex++] = channelData[i];
+      if (this.bufferIndex >= this.bufferSize) {
+        this.port.postMessage(this.buffer.slice());
+        this.bufferIndex = 0;
+      }
+    }
+    return true;
+  }
+}
+
+registerProcessor('acoustic-worklet-processor', AcousticWorkletProcessor);
+`;
 
 export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAnalysisHook {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -26,10 +63,26 @@ export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAn
   const [acousticStressScore, setAcousticStressScore] = useState(1.0);
   const [latestResult, setLatestResult] = useState<AcousticFrameResult | null>(null);
 
+  const [isCalibrating, setIsCalibrating] = useState(false);
+  const [isCalibrated, setIsCalibrated] = useState(false);
+  const [calibrationProgress, setCalibrationProgress] = useState(0);
+  const [baselineF0, setBaselineF0] = useState(120.0);
+  const [normalizedJitterRatio, setNormalizedJitterRatio] = useState(1.0);
+  const [normalizedShimmerRatio, setNormalizedShimmerRatio] = useState(1.0);
+
   const analyzerRef = useRef<AcousticSignalAnalyzer | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const workletNodeRef = useRef<AudioWorkletNode | null>(null);
   const processorNodeRef = useRef<ScriptProcessorNode | null>(null);
+
+  const startCalibration = (durationMs: number = 15000) => {
+    if (analyzerRef.current) {
+      analyzerRef.current.startCalibration(durationMs);
+      setIsCalibrating(true);
+      setCalibrationProgress(0);
+    }
+  };
 
   useEffect(() => {
     if (!mediaStream) {
@@ -44,6 +97,7 @@ export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAn
     }
 
     let isCancelled = false;
+    let workletBlobUrl: string | null = null;
 
     const startAudioProcessing = async () => {
       try {
@@ -60,21 +114,35 @@ export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAn
         const analyzer = new AcousticSignalAnalyzer(audioCtx.sampleRate);
         analyzerRef.current = analyzer;
 
+        // Auto-start 15-second individual baseline calibration
+        analyzer.startCalibration(15000);
+        setIsCalibrating(true);
+
         const source = audioCtx.createMediaStreamSource(mediaStream);
         sourceNodeRef.current = source;
 
-        // 2048 sample buffer gives ~42.6ms windows at 48kHz (ideal for vocal pitch & cycle resolution)
-        const processor = audioCtx.createScriptProcessor(2048, 1, 1);
-        processorNodeRef.current = processor;
+        const dummyGain = audioCtx.createGain();
+        dummyGain.gain.value = 0;
+        dummyGain.connect(audioCtx.destination);
 
         let frameThrottle = 0;
 
-        processor.onaudioprocess = (e: AudioProcessingEvent) => {
+        const handleAudioFrame = (channelData: Float32Array) => {
           if (isCancelled) return;
-          const inputChannel = e.inputBuffer.getChannelData(0);
-          const result = analyzer.processFrame(inputChannel);
+          const result = analyzer.processFrame(channelData);
 
-          // Throttle React state updates to ~15-20 updates/sec to protect rendering performance
+          // Update calibration status
+          const calStatus = analyzer.getCalibrationProgress();
+          setIsCalibrating(calStatus.isCalibrating);
+          setCalibrationProgress(calStatus.progressPercent);
+          setIsCalibrated(calStatus.isCalibrated);
+
+          if (calStatus.isCalibrated) {
+            const base = analyzer.getBaseline();
+            setBaselineF0(base.baselineF0);
+          }
+
+          // Throttle React state updates to ~15 updates/sec for smooth rendering
           frameThrottle++;
           if (frameThrottle % 2 === 0) {
             setPitchHz(result.pitchHz);
@@ -85,20 +153,53 @@ export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAn
             setPitchVariance(result.pitchVariance);
             setIsFlatAffect(result.isFlatAffect);
             setAcousticStressScore(result.acousticStressScore);
+            setNormalizedJitterRatio(result.normalizedJitterRatio ?? 1.0);
+            setNormalizedShimmerRatio(result.normalizedShimmerRatio ?? 1.0);
             setLatestResult(result);
           }
         };
 
-        source.connect(processor);
-        // Connect to a silent dummy destination to keep processor flowing
-        const dummyGain = audioCtx.createGain();
-        dummyGain.gain.value = 0;
-        processor.connect(dummyGain);
-        dummyGain.connect(audioCtx.destination);
+        let workletAttached = false;
+
+        // Attempt modern high-priority AudioWorklet first
+        if (audioCtx.audioWorklet) {
+          try {
+            const blob = new Blob([AUDIO_WORKLET_CODE], { type: 'application/javascript' });
+            workletBlobUrl = URL.createObjectURL(blob);
+            await audioCtx.audioWorklet.addModule(workletBlobUrl);
+
+            const workletNode = new AudioWorkletNode(audioCtx, 'acoustic-worklet-processor');
+            workletNodeRef.current = workletNode;
+
+            workletNode.port.onmessage = (event: MessageEvent<Float32Array>) => {
+              handleAudioFrame(event.data);
+            };
+
+            source.connect(workletNode);
+            workletNode.connect(dummyGain);
+            workletAttached = true;
+          } catch (workletError: unknown) {
+            console.info("[useAcousticAnalysis] Worklet initialization fallback to ScriptProcessor:", workletError);
+          }
+        }
+
+        // ScriptProcessorNode fallback for restricted contexts or older browsers
+        if (!workletAttached) {
+          const processor = audioCtx.createScriptProcessor(2048, 1, 1);
+          processorNodeRef.current = processor;
+
+          processor.onaudioprocess = (e: AudioProcessingEvent) => {
+            const inputChannel = e.inputBuffer.getChannelData(0);
+            handleAudioFrame(inputChannel);
+          };
+
+          source.connect(processor);
+          processor.connect(dummyGain);
+        }
 
         setIsAnalyzing(true);
       } catch (err: unknown) {
-        console.warn("[useAcousticAnalysis] Audio initialization fallback:", err instanceof Error ? err.message : String(err));
+        console.warn("[useAcousticAnalysis] Audio initialization failed:", err instanceof Error ? err.message : String(err));
       }
     };
 
@@ -106,8 +207,14 @@ export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAn
 
     return () => {
       isCancelled = true;
+      if (workletBlobUrl) {
+        URL.revokeObjectURL(workletBlobUrl);
+      }
       if (sourceNodeRef.current) {
         try { sourceNodeRef.current.disconnect(); } catch {}
+      }
+      if (workletNodeRef.current) {
+        try { workletNodeRef.current.disconnect(); } catch {}
       }
       if (processorNodeRef.current) {
         try { processorNodeRef.current.disconnect(); } catch {}
@@ -129,6 +236,13 @@ export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAn
     pitchVariance,
     isFlatAffect,
     acousticStressScore,
-    latestResult
+    latestResult,
+    isCalibrating,
+    isCalibrated,
+    calibrationProgress,
+    baselineF0,
+    normalizedJitterRatio,
+    normalizedShimmerRatio,
+    startCalibration
   };
 }

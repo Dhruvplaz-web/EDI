@@ -110,6 +110,50 @@ if (!silentRes.isVoiced && silentRes.pitchHz === 0) {
   process.exit(1);
 }
 
+// Test 5: 15-Second Baseline Calibration & Normalized Ratio Metric (Opus Codec Invariance)
+console.log("\n[TEST 5] Baseline Calibration & Normalized Ratio Computation...");
+analyzer.reset();
+analyzer.startCalibration(100); // 100ms test duration
+
+// Feed neutral tone to establish baseline
+const baselineTone = generateTestVocalSignal(200, sampleRate, 0.2, 0.01, 0.02);
+for (let i = 0; i < baselineTone.length - frameSize; i += frameSize) {
+  const frame = baselineTone.subarray(i, i + frameSize);
+  analyzer.processFrame(frame);
+}
+
+// Wait 120ms to allow calibration time threshold to pass
+await new Promise(r => setTimeout(r, 120));
+
+// Process another frame to trigger finalization
+const nextFrame = baselineTone.subarray(0, frameSize);
+const calResult = analyzer.processFrame(nextFrame);
+const baseline = analyzer.getBaseline();
+
+console.log(`  -> Baseline Calibrated: ${baseline.isCalibrated}, F0: ${baseline.baselineF0} Hz, Jitter: ${baseline.baselineJitter}%`);
+if (!baseline.isCalibrated) {
+  console.error("  ✗ FAILED: Baseline failed to calibrate within specified duration");
+  process.exit(1);
+}
+
+// Now feed elevated jitter signal and test normalized ratio
+const elevatedTone = generateTestVocalSignal(200, sampleRate, 0.3, 0.05, 0.04);
+let elevatedRatio = 1.0;
+for (let i = 0; i < elevatedTone.length - frameSize; i += frameSize) {
+  const frame = elevatedTone.subarray(i, i + frameSize);
+  const res = analyzer.processFrame(frame);
+  if (res.normalizedJitterRatio) {
+    elevatedRatio = res.normalizedJitterRatio;
+  }
+}
+console.log(`  -> Normalized Jitter Ratio (S(t) / S_baseline): ${elevatedRatio}x`);
+if (elevatedRatio >= 1.2) {
+  console.log("  ✓ PASSED: Normalized ratio successfully captures individual deviation relative to baseline (>= 1.2x)");
+} else {
+  console.error(`  ✗ FAILED: Ratio did not capture elevated perturbation: ${elevatedRatio}`);
+  process.exit(1);
+}
+
 console.log("\n=============================================================");
-console.log("   ALL 4 ACOUSTIC SIGNAL ANALYZER TESTS PASSED! ✓");
+console.log("   ALL 5 ACOUSTIC SIGNAL ANALYZER TESTS PASSED! ✓");
 console.log("=============================================================\n");
