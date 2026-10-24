@@ -84,19 +84,19 @@ export const SAAS_PLANS: Record<PlanTier, PricingPlan> = {
       { name: 'Everything in Solo Practice', included: true },
       { name: 'Cross-Modal Attention Fusion (Acoustic + Facial + Linguistic)', included: true },
       { name: 'Automated Discrepancy Index D(t) Tracking', included: true },
-      { name: 'Customizable EHR SOAP Note Templates', included: true },
+      { name: 'Standard Clinical SOAP Note Formulation', included: true },
       { name: '1-Year Clinical Telemetry History & Trends', included: true },
-      { name: 'Standard HIPAA Business Associate Agreement (BAA)', included: true },
-      { name: 'Automated EHR / FHIR Integration', included: false },
-      { name: 'Custom SSO / SAML Authentication', included: false },
+      { name: 'Standard HIPAA BAA [In Review - Coming soon]', included: false },
+      { name: 'Automated EHR / FHIR Integration [Coming soon]', included: false },
+      { name: 'Custom SSO / SAML Authentication [Coming soon]', included: false },
     ],
     entitlements: {
       maxMonthlyConsultationsPerSeat: 500,
       telemetryHistoryDays: 365,
       crossAttentionMultimodalFusion: true,
-      customSoapTemplates: true,
+      customSoapTemplates: false,
       liveEmergencyDispatchIntegration: true,
-      hipaaBaaDedicated: true,
+      hipaaBaaDedicated: false,
       ehrFhirExport: false,
       dedicatedSupportSlaHours: 12,
     }
@@ -117,9 +117,9 @@ export const SAAS_PLANS: Record<PlanTier, PricingPlan> = {
       { name: 'Everything in Clinical Group Practice', included: true },
       { name: 'Multi-Tenant Clinical Operations Isolation', included: true },
       { name: 'Multi-Year Audit Trail & Telemetry Archive', included: true },
-      { name: '24/7/365 Dedicated Systems Engineer SLA', included: true },
-      { name: 'Epic / Cerner HL7 & FHIR Bidirectional Sync [Coming Soon]', included: false },
-      { name: 'SAML 2.0 / Okta / Azure AD SSO [Coming Soon]', included: false },
+      { name: '24/7/365 Dedicated Systems Engineer SLA [Coming soon]', included: false },
+      { name: 'Epic / Cerner HL7 & FHIR Bidirectional Sync [Coming soon]', included: false },
+      { name: 'SAML 2.0 / Okta / Azure AD SSO [Coming soon]', included: false },
     ],
     entitlements: {
       maxMonthlyConsultationsPerSeat: 99999,
@@ -127,24 +127,73 @@ export const SAAS_PLANS: Record<PlanTier, PricingPlan> = {
       crossAttentionMultimodalFusion: true,
       customSoapTemplates: false, // In development
       liveEmergencyDispatchIntegration: true,
-      hipaaBaaDedicated: true,
+      hipaaBaaDedicated: false, // Dedicated enterprise BAA pending counsel review
       ehrFhirExport: false, // Coming soon
       dedicatedSupportSlaHours: 1,
     }
   }
 };
 
+export type SubscriptionStatus =
+  | 'active'
+  | 'trialing'
+  | 'past_due'
+  | 'canceled'
+  | 'unpaid'
+  | 'incomplete'
+  | 'none';
+
+export interface OrgSubscriptionInfo {
+  tier?: PlanTier;
+  status: SubscriptionStatus;
+  currentSeats: number;
+  maxSeats: number;
+  trialEndsAt?: number;
+  pastDueSince?: number;
+}
+
 /**
- * Checks if a given organization plan has entitlement to a specific feature
+ * Checks if a given organization has entitlement to a specific feature.
+ * Enforces subscription status (active/trialing OK; past_due 7-day grace period; canceled/unpaid/none locked),
+ * verifies seat count, and rejects missing tiers with zero default fallback.
  */
 export function hasFeatureEntitlement(
-  tier: PlanTier | undefined,
+  subscription: OrgSubscriptionInfo | PlanTier | undefined,
   feature: keyof typeof SAAS_PLANS['starter']['entitlements']
 ): boolean {
-  if (!tier || !SAAS_PLANS[tier]) {
+  if (!subscription) {
     return false;
   }
-  const plan = SAAS_PLANS[tier];
+
+  if (typeof subscription === 'string') {
+    const plan = SAAS_PLANS[subscription];
+    return plan ? Boolean(plan.entitlements[feature]) : false;
+  }
+
+  if (!subscription.tier || !SAAS_PLANS[subscription.tier]) {
+    return false;
+  }
+
+  // 1. Subscription status check
+  const lockedStatuses: SubscriptionStatus[] = ['canceled', 'unpaid', 'incomplete', 'none'];
+  if (lockedStatuses.includes(subscription.status)) {
+    return false;
+  }
+
+  // 2. Past due grace period (7 days)
+  if (subscription.status === 'past_due') {
+    const gracePeriodMs = 7 * 24 * 60 * 60 * 1000;
+    if (subscription.pastDueSince && Date.now() - subscription.pastDueSince > gracePeriodMs) {
+      return false; // Grace period expired, locked
+    }
+  }
+
+  // 3. Seat count check (currentSeats must not exceed maxSeats)
+  if (subscription.currentSeats > subscription.maxSeats) {
+    return false; // Seat limit exceeded, access locked until upgraded or pruned
+  }
+
+  const plan = SAAS_PLANS[subscription.tier];
   const value = plan.entitlements[feature];
   return Boolean(value);
 }

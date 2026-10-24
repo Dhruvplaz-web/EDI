@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { POST as webhookPOST, processedWebhookEventIds } from '@/app/api/stripe/webhook/route';
+import { POST as webhookPOST } from '@/app/api/stripe/webhook/route';
 import { POST as checkoutPOST } from '@/app/api/stripe/checkout/route';
 import { stripe } from '@/lib/stripe/client';
 import Stripe from 'stripe';
 import { createSignedSessionToken } from '@/lib/auth/session';
+import { clearIdempotencyStoreForTesting } from '@/lib/stripe/idempotency';
 
 let currentMockCookies: Record<string, string> = {};
 
@@ -21,7 +22,7 @@ vi.mock('next/headers', () => ({
 describe('Stripe Production Safety & Webhook Idempotency', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    processedWebhookEventIds.clear();
+    clearIdempotencyStoreForTesting();
     currentMockCookies = {};
   });
 
@@ -84,6 +85,8 @@ describe('Stripe Production Safety & Webhook Idempotency', () => {
 
     it('prohibits mock sandbox mode when NODE_ENV is production and keys are missing/placeholder', async () => {
       (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
+      process.env.AUTH_SECRET = 'a_secure_production_auth_secret_with_more_than_32_characters!!';
+      process.env.FIREBASE_PROJECT_ID = 'praxis-test-project';
       delete process.env.STRIPE_SECRET_KEY;
 
       const adminToken = await createSignedSessionToken({

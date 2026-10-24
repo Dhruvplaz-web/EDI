@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { stripe, isStripeConfigured } from '@/lib/stripe/client';
 import { cookies } from 'next/headers';
+import { verifySignedSessionToken } from '@/lib/auth/session';
 
 const portalSchema = z.object({
   customerId: z.string().optional(),
@@ -13,13 +14,15 @@ export async function POST(req: NextRequest) {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session')?.value;
-    const userRole = cookieStore.get('user_role')?.value;
 
-    if (!sessionCookie) {
+    const verifiedSession = await verifySignedSessionToken(sessionCookie);
+    if (!verifiedSession) {
       return NextResponse.json({ error: 'Unauthorized: Authentication required.' }, { status: 401 });
     }
 
-    if (!['super_admin', 'billing_admin', 'clinic_manager', 'clinical_director'].includes(userRole || '')) {
+    const { role: userRole, orgId: sessionOrgId } = verifiedSession;
+
+    if (!['super_admin', 'billing_admin', 'clinic_manager'].includes(userRole)) {
       return NextResponse.json({ error: 'Forbidden: Insufficient permissions.' }, { status: 403 });
     }
 
@@ -29,10 +32,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid payload', details: parseResult.error.format() }, { status: 400 });
     }
 
-    const { customerId, orgId, returnUrl } = parseResult.data;
+    const { customerId, orgId: requestedOrgId, returnUrl } = parseResult.data;
+
+    // SEC-03 & A.5: IDOR Protection
+    if (userRole !== 'super_admin' && requestedOrgId && requestedOrgId !== sessionOrgId) {
+      return NextResponse.json({ error: 'Forbidden: Cross-tenant billing modification denied.' }, { status: 403 });
+    }
+
+    const orgId = userRole === 'super_admin' ? (requestedOrgId || sessionOrgId) : sessionOrgId;
     const host = req.headers.get('host') || 'localhost:3000';
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const baseUrl = `${protocol}://${host}`;
+
+    if (process.env.NODE_ENV === 'production' && !isStripeConfigured()) {
+      return NextResponse.json(
+        { error: 'Production Error: Live Stripe keys must be configured. Mock mode is forbidden in production.' },
+        { status: 500 }
+      );
+    }
 
     if (!isStripeConfigured() || !customerId) {
       return NextResponse.json({

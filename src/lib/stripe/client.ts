@@ -1,11 +1,12 @@
 import Stripe from 'stripe';
 
 const isProduction = process.env.NODE_ENV === 'production';
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || (isProduction ? '' : 'sk_test_placeholder_for_development_mode');
+const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || process.env.npm_lifecycle_event === 'build';
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || (isProduction && !isBuildTime ? '' : 'sk_test_placeholder_for_development_mode');
 
-if (isProduction && (!stripeSecretKey || stripeSecretKey.includes('placeholder'))) {
+if (isProduction && !isBuildTime && (!stripeSecretKey || stripeSecretKey.includes('placeholder'))) {
   throw new Error(
-    '[FATAL PRODUCTION CONFIG ERROR] STRIPE_SECRET_KEY is missing or using a development placeholder in production! Mock billing mode is prohibited in production builds.'
+    '[FATAL PRODUCTION CONFIG ERROR] STRIPE_SECRET_KEY is missing or using a development placeholder in production! Mock billing mode is prohibited in production runtime.'
   );
 }
 

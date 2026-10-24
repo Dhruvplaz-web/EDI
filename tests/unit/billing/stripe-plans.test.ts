@@ -34,9 +34,9 @@ describe('SaaS Billing Engine & Tier Entitlement Gating', () => {
     expect(hasFeatureEntitlement('starter', 'ehrFhirExport')).toBe(false);
   });
 
-  it('enforces feature gating: Clinical Group Practice includes Multimodal Fusion and Standard BAA', () => {
+  it('enforces feature gating: Clinical Group Practice includes Multimodal Fusion and marks unexecuted BAA as Coming Soon', () => {
     expect(hasFeatureEntitlement('professional', 'crossAttentionMultimodalFusion')).toBe(true);
-    expect(hasFeatureEntitlement('professional', 'hipaaBaaDedicated')).toBe(true);
+    expect(hasFeatureEntitlement('professional', 'hipaaBaaDedicated')).toBe(false); // Part G.4: BAA pending counsel review
     expect(hasFeatureEntitlement('professional', 'ehrFhirExport')).toBe(false); // Only Enterprise
   });
 

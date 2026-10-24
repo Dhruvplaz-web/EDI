@@ -25,8 +25,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized: Valid session required.' }, { status: 401 });
     }
 
-    const { role: userRole } = verifiedSession;
-    if (!['super_admin', 'billing_admin', 'clinic_manager', 'clinical_director'].includes(userRole)) {
+    const { role: userRole, orgId: sessionOrgId } = verifiedSession;
+    if (!['super_admin', 'billing_admin', 'clinic_manager'].includes(userRole)) {
       return NextResponse.json({ error: 'Forbidden: Insufficient permissions to manage clinic billing.' }, { status: 403 });
     }
 
@@ -37,7 +37,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid payload', details: parseResult.error.format() }, { status: 400 });
     }
 
-    const { tier, seats, billingCycle, orgId, successUrl, cancelUrl } = parseResult.data;
+    const { tier, seats, billingCycle, orgId: requestedOrgId, successUrl, cancelUrl } = parseResult.data;
+
+    // SEC-03 & A.5: IDOR Protection - OrgId MUST match verified session token
+    if (userRole !== 'super_admin' && requestedOrgId && requestedOrgId !== sessionOrgId) {
+      return NextResponse.json({ error: 'Forbidden: Cross-tenant billing modification denied.' }, { status: 403 });
+    }
+
+    const orgId = userRole === 'super_admin' ? (requestedOrgId || sessionOrgId) : sessionOrgId;
     const plan = SAAS_PLANS[tier as PlanTier];
 
     const host = req.headers.get('host') || 'localhost:3000';
