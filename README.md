@@ -10,9 +10,11 @@
 [![DPDP Act 2023](https://img.shields.io/badge/DPDP_Act_2023-Designed_to_Support-0052CC?style=for-the-badge)](docs/INDIA_COMPLIANCE_MATRIX.md)
 [![Telemedicine Guidelines 2020](https://img.shields.io/badge/NMC_Telemedicine_2020-Designed_to_Support-emerald?style=for-the-badge)](docs/INDIA_COMPLIANCE_MATRIX.md)
 [![ICMR AI Framework](https://img.shields.io/badge/ICMR_AI_2023-RUO_Governance-purple?style=for-the-badge)](docs/INDIA_COMPLIANCE_MATRIX.md)
+[![Maturity](https://img.shields.io/badge/Maturity-Internal_Demo_%2F_Pre--Pilot-amber?style=for-the-badge)](docs/INDIA_DELIVERABLES_STATUS.md)
 
 <p align="center">
-  <strong>Tele-psychiatry platform featuring real-time client-side acoustic prosody DSP, 3D facial Action Unit kinematics, and multi-head cross-attention fusion designed to assist licensed clinicians in detecting objective markers of affective distress and symptom masking.</strong>
+  <strong>Tele-psychiatry platform designed to support Indian clinics and Registered Medical Practitioners (RMPs) with WebRTC consultations, DPDP 2023 data fiduciary compliance, localized crisis intervention, trilingual UX (EN/HI/MR), and research-mode multimodal bio-behavioral telemetry.</strong><br>
+  <em>B2B Architecture: Clinic is the Data Fiduciary • Praxis AI is the Data Processor</em>
 </p>
 
 [Key Features](#-key-architectural-features) •
@@ -42,7 +44,7 @@
 - **Acoustic Digital Signal Processing (Edge DSP)**: Real-time `AudioWorklet` processor executing the **YIN autocorrelation pitch algorithm** to extract fundamental frequency ($F_0$), vocal period **jitter %**, amplitude **shimmer %**, and dynamic **SNR noise floor tracking**.
 - **Psychiatric NLP & Speech Cadence**: Real-time lexical analysis and speech cadence velocity (**Words Per Minute**) with safety boundary checks.
 - **Cross-Attention Multimodal Fusion**: Calibrated cross-modal attention weights that generate an interpretable composite distress index ($1.0 - 10.0$) and a **Discrepancy Index ($D(t)$)** when subjective verbal minimization contrasts with elevated involuntary autonomic cues.
-- **B2B SaaS Multi-Tenancy & Billing**: Strict organization data isolation (`orgId`), Stripe subscription tiers (Solo Practice, Clinical Group, Enterprise Health System), and separated synthetic demo cohorts.
+- **B2B SaaS Multi-Tenancy & Billing**: Strict organization data isolation (`orgId`), Indian multi-tier clinic licensing managed via Razorpay Subscriptions (INR, UPI Autopay, cards, e-NACH) with automated 18% GST calculation (SAC 998313, intra-state CGST+SGST vs inter-state IGST), alongside Stripe for international billing.
 
 ---
 
