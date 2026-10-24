@@ -40,8 +40,8 @@ describe('SaaS Billing Engine & Tier Entitlement Gating', () => {
     expect(hasFeatureEntitlement('professional', 'ehrFhirExport')).toBe(false); // Only Enterprise
   });
 
-  it('enforces feature gating: Enterprise Health System unlocks FHIR EHR integration', () => {
-    expect(hasFeatureEntitlement('enterprise', 'ehrFhirExport')).toBe(true);
+  it('enforces feature gating: Enterprise Health System marks unbuilt FHIR EHR as coming soon and includes Multimodal Fusion', () => {
+    expect(hasFeatureEntitlement('enterprise', 'ehrFhirExport')).toBe(false); // Part C: Unbuilt feature marked Coming Soon
     expect(hasFeatureEntitlement('enterprise', 'crossAttentionMultimodalFusion')).toBe(true);
   });
 });

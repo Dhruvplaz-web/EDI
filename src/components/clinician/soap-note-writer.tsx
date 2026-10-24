@@ -25,6 +25,7 @@ interface SOAPNoteWriterProps {
     acoustic: number;
     linguistic: number;
   };
+  patientConsentToken?: string;
   onSaveSOAP?: (soap: { subjective: string; objective: string; assessment: string; plan: string }) => void;
 }
 
@@ -41,6 +42,7 @@ export function SOAPNoteWriter({
   speechJitter = 0.8,
   isFlatAffect = false,
   sessionTranscript = '',
+  patientConsentToken,
   attentionWeights = { visual: 0.33, acoustic: 0.34, linguistic: 0.33 },
   onSaveSOAP
 }: SOAPNoteWriterProps) {
@@ -65,9 +67,11 @@ export function SOAPNoteWriter({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [scribeBadge, setScribeBadge] = useState<string | null>(null);
+  const [consentError, setConsentError] = useState<string | null>(null);
 
   const handleGenerateAISoap = async () => {
     setIsGenerating(true);
+    setConsentError(null);
     try {
       const res = await fetch('/api/clinical/generate-soap', {
         method: 'POST',
@@ -85,7 +89,8 @@ export function SOAPNoteWriter({
           isFlatAffect,
           discrepancyAlert,
           discrepancyD,
-          attentionWeights
+          attentionWeights,
+          patientConsentToken,
         })
       });
 
@@ -101,6 +106,11 @@ export function SOAPNoteWriter({
             patientId,
             details: `Auto-generated multimodal SOAP note via ${data.generatedBy}`
           });
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 403 && errData.code === 'PATIENT_CONSENT_REQUIRED') {
+          setConsentError("Patient biometric & telemetry consent has not been granted. Documentation cannot be auto-generated.");
         }
       }
     } catch (err) {
@@ -170,6 +180,12 @@ Generated with Praxis AI Multimodal Clinical Decision Support.`;
           <CardDescription className="text-xs text-slate-500 mt-0.5">
             Auto-synthesizes structured SOAP notes using live WebRTC transcript & multimodal biometric tensors.
           </CardDescription>
+          {consentError && (
+            <div className="mt-2.5 p-2 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>{consentError}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center flex-wrap gap-2">

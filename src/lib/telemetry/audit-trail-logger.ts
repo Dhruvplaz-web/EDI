@@ -16,12 +16,16 @@ export interface AuditLogEntry {
 }
 
 export async function logComplianceAudit(entry: Omit<AuditLogEntry, 'timestamp'>) {
+  const fullLog: AuditLogEntry = {
+    ...entry,
+    timestamp: new Date().toISOString()
+  };
+
   try {
-    const fullLog: AuditLogEntry = {
-      ...entry,
-      timestamp: new Date().toISOString()
-    };
+    if (db) {
+      await addDoc(collection(db, 'audit_logs'), fullLog);
+    }
   } catch {
-    console.warn("Audit log fallback write:", entry);
+    console.warn("Audit log fallback write:", fullLog);
   }
 }

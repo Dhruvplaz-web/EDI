@@ -105,7 +105,7 @@ export const SAAS_PLANS: Record<PlanTier, PricingPlan> = {
     id: 'enterprise',
     name: 'Health System & Hospital',
     badge: 'ENTERPRISE',
-    tagline: 'Custom hospital network deployment, HL7/FHIR EHR synchronization, and dedicated compliance guarantees.',
+    tagline: 'Custom hospital network deployment, dedicated cloud isolation, and team management.',
     pricePerSeatMonthly: 799,
     pricePerSeatAnnual: 649,
     maxSeats: 9999,
@@ -115,21 +115,20 @@ export const SAAS_PLANS: Record<PlanTier, PricingPlan> = {
     features: [
       { name: 'Unlimited Clinician Seats', included: true },
       { name: 'Everything in Clinical Group Practice', included: true },
-      { name: 'Bidirectional Epic / Cerner HL7 & FHIR Sync', included: true },
-      { name: 'Custom On-Premises or Dedicated Cloud Isolation', included: true },
-      { name: 'Custom Enterprise BAA with 99.99% Uptime SLA', included: true },
-      { name: 'SAML 2.0 / Okta / Azure AD Single Sign-On', included: true },
-      { name: 'Immutable Multi-Year Audit Trail Export', included: true },
-      { name: '24/7/365 Dedicated Healthcare Systems Engineer', included: true },
+      { name: 'Multi-Tenant Clinical Operations Isolation', included: true },
+      { name: 'Multi-Year Audit Trail & Telemetry Archive', included: true },
+      { name: '24/7/365 Dedicated Systems Engineer SLA', included: true },
+      { name: 'Epic / Cerner HL7 & FHIR Bidirectional Sync [Coming Soon]', included: false },
+      { name: 'SAML 2.0 / Okta / Azure AD SSO [Coming Soon]', included: false },
     ],
     entitlements: {
       maxMonthlyConsultationsPerSeat: 99999,
-      telemetryHistoryDays: 2555, // 7 years HIPAA compliance
+      telemetryHistoryDays: 2555, // 7 years HIPAA data retention
       crossAttentionMultimodalFusion: true,
-      customSoapTemplates: true,
+      customSoapTemplates: false, // In development
       liveEmergencyDispatchIntegration: true,
       hipaaBaaDedicated: true,
-      ehrFhirExport: true,
+      ehrFhirExport: false, // Coming soon
       dedicatedSupportSlaHours: 1,
     }
   }

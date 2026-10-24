@@ -87,7 +87,7 @@ export default function PatientIntakePage() {
       }
       stopAnalysis()
     }
-  }, [])
+  }, [stopAnalysis])
 
   return (
     <div className="flex-1 overflow-auto p-6 lg:p-10 bg-slate-50 dark:bg-slate-950">

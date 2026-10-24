@@ -13,7 +13,7 @@ export interface FacialAnalysisHook {
   discrepancyValue: number;
   isPoseCentered: boolean;
   headPose: { pitchDeg: number; yawDeg: number; rollDeg: number };
-  startAnalysis: (videoElement: HTMLVideoElement) => void;
+  startAnalysis: (videoElement: HTMLVideoElement, hasConsent?: boolean) => void;
   stopAnalysis: () => number;
   calibrateBaseline: (videoElement: HTMLVideoElement, durationSec?: number) => Promise<void>;
   setSubjectiveScore: (score: number) => void;
@@ -113,8 +113,12 @@ export function useFacialAnalysis(): FacialAnalysisHook {
     setIsCalibrated(true);
   };
 
-  const startAnalysis = (videoElement: HTMLVideoElement) => {
+  const startAnalysis = (videoElement: HTMLVideoElement, hasConsent: boolean = false) => {
     if (!videoElement || isAnalyzing.current) return;
+    if (!hasConsent) {
+      console.warn("[useFacialAnalysis] Cannot start facial kinematics capture: Patient consent required (REG-01).");
+      return;
+    }
     isAnalyzing.current = true;
 
     const canvas = document.createElement('canvas');

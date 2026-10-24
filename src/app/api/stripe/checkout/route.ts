@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { stripe, isStripeConfigured } from '@/lib/stripe/client';
 import { SAAS_PLANS, PlanTier } from '@/lib/stripe/plans';
 import { cookies } from 'next/headers';
+import { verifySignedSessionToken } from '@/lib/auth/session';
 
 const checkoutSchema = z.object({
   tier: z.enum(['starter', 'professional', 'enterprise']),
@@ -15,16 +16,17 @@ const checkoutSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authenticate caller via session cookie
+    // 1. Authenticate caller via cryptographically verified session token
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session')?.value;
-    const userRole = cookieStore.get('user_role')?.value;
 
-    if (!sessionCookie) {
-      return NextResponse.json({ error: 'Unauthorized: Authentication required.' }, { status: 401 });
+    const verifiedSession = await verifySignedSessionToken(sessionCookie);
+    if (!verifiedSession) {
+      return NextResponse.json({ error: 'Unauthorized: Valid session required.' }, { status: 401 });
     }
 
-    if (!['super_admin', 'billing_admin', 'clinic_manager', 'clinical_director'].includes(userRole || '')) {
+    const { role: userRole } = verifiedSession;
+    if (!['super_admin', 'billing_admin', 'clinic_manager', 'clinical_director'].includes(userRole)) {
       return NextResponse.json({ error: 'Forbidden: Insufficient permissions to manage clinic billing.' }, { status: 403 });
     }
 
@@ -42,7 +44,15 @@ export async function POST(req: NextRequest) {
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const baseUrl = `${protocol}://${host}`;
 
-    // 3. Fallback mock response for test/sandbox environments without live Stripe secret key
+    // 3. Strict Production Ban on Mock Mode
+    if (process.env.NODE_ENV === 'production' && !isStripeConfigured()) {
+      return NextResponse.json(
+        { error: 'Production Error: Live Stripe keys must be configured. Mock mode is forbidden in production.' },
+        { status: 500 }
+      );
+    }
+
+    // Fallback mock response for dev/test environments only
     if (!isStripeConfigured()) {
       return NextResponse.json({
         url: `${baseUrl}/admin/billing?status=mock_checkout_success&tier=${tier}&seats=${seats}&orgId=${orgId}`,

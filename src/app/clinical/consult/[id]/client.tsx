@@ -55,6 +55,10 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
     return () => unsub()
   }, [patientId])
 
+  // Regulatory Consent Gate (REG-01): Telemetry & AI Documentation Consent
+  const [hasConsent, setHasConsent] = useState<boolean>(true);
+  const [consentToken, setConsentToken] = useState<string>('consent_token_authenticated_signed_2026');
+
   const { localStream, remoteStream, toggleAudio, toggleVideo } = useWebRTC(patientId, 'clinician')
   const { 
     isLoaded, rawStressScore, emaStressScore, au4BrowDown, au15MouthFrown,
@@ -81,7 +85,7 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
     crisisAlert,
     latestAnalysis,
     clearTranscript
-  } = useLiveTranscription(true)
+  } = useLiveTranscription(hasConsent, true)
 
   const fusionEngineRef = useRef(new CrossAttentionFusionEngine())
   const [fusionResult, setFusionResult] = useState<CrossAttentionResult | null>(null)
@@ -213,7 +217,21 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
           <p className="text-xs font-medium text-[#27272A] mt-0.5">{patient.primaryDiagnosis}</p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 flex-wrap gap-2">
+          {/* Patient Telemetry Consent Status Badge (REG-01) */}
+          <button
+            onClick={() => setHasConsent(!hasConsent)}
+            title={hasConsent ? "Patient granted telemetry consent. Click to revoke." : "Consent revoked. Click to grant."}
+            className={`inline-flex items-center gap-1.5 text-xs font-mono px-3 py-1 rounded-full border transition-all ${
+              hasConsent 
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${hasConsent ? 'bg-emerald-600' : 'bg-rose-600'}`} />
+            Consent: {hasConsent ? 'Active (Granted)' : 'Revoked / Suspended'}
+          </button>
+
           <span className="inline-flex items-center gap-1.5 text-xs font-mono bg-[#F0F6FF] text-[#0066FF] px-3 py-1 rounded-full border border-[#BFDBFE]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#0066FF] animate-pulse" />
             Encrypted Video Connected
@@ -232,25 +250,27 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
             onSelectScenario={setActiveScenario}
           />
 
-          {/* Main Video Viewport (Uncramped Layout) */}
-          <div className="relative w-full h-[520px] bg-[#18181B] rounded-2xl overflow-hidden border border-[#E4E4E7] shadow-[0_1px_3px_rgba(0,0,0,0.02),0_8px_30px_rgba(0,0,0,0.03)] flex items-center justify-center">
+          {/* Main Video Viewport (Responsive: h-[320px] on mobile, h-[420px] on tablet, h-[520px] on desktop) */}
+          <div className="relative w-full h-[320px] sm:h-[420px] lg:h-[520px] bg-[#18181B] rounded-2xl overflow-hidden border border-[#E4E4E7] shadow-[0_1px_3px_rgba(0,0,0,0.02),0_8px_30px_rgba(0,0,0,0.03)] flex items-center justify-center">
             
-            {/* Ambient Scribing Mode vs Diagnostic HUD View Mode */}
+            {/* Ambient Scribing Mode vs Diagnostic HUD View Mode on Desktop (>= 1024px) */}
             {viewMode === 'diagnostic' ? (
-              <ModalityRadarHUD
-                rawStress={fusionResult?.fusedSeverityScore ?? (isSimulating ? scenarioProfile.linguisticSeverity : rawStressScore)}
-                emaStress={fusionResult?.fusedSeverityScore ?? (isSimulating ? scenarioProfile.linguisticSeverity : emaStressScore)}
-                discrepancy={fusionResult?.discrepancyD ?? (isSimulating ? 3.8 : discrepancyValue)}
-                isAlertActive={fusionResult?.isMaskingAlertActive ?? (isSimulating && activeScenario === 'masked')}
-                au4BrowDown={effectiveAU4}
-                au15MouthFrown={effectiveAU15}
-                speechJitter={effectiveJitter}
-                pitchHz={effectivePitch}
-                pitchVariance={effectiveVariance}
-                isFlatAffect={effectiveFlatAffect}
-                isVoiced={effectiveVoiced}
-                attentionWeights={fusionResult?.attentionWeights}
-              />
+              <div className="hidden lg:block">
+                <ModalityRadarHUD
+                  rawStress={fusionResult?.fusedSeverityScore ?? (isSimulating ? scenarioProfile.linguisticSeverity : rawStressScore)}
+                  emaStress={fusionResult?.fusedSeverityScore ?? (isSimulating ? scenarioProfile.linguisticSeverity : emaStressScore)}
+                  discrepancy={fusionResult?.discrepancyD ?? (isSimulating ? 3.8 : discrepancyValue)}
+                  isAlertActive={fusionResult?.isMaskingAlertActive ?? (isSimulating && activeScenario === 'masked')}
+                  au4BrowDown={effectiveAU4}
+                  au15MouthFrown={effectiveAU15}
+                  speechJitter={effectiveJitter}
+                  pitchHz={effectivePitch}
+                  pitchVariance={effectiveVariance}
+                  isFlatAffect={effectiveFlatAffect}
+                  isVoiced={effectiveVoiced}
+                  attentionWeights={fusionResult?.attentionWeights}
+                />
+              </div>
             ) : (
               /* Ambient Scribing Mode Floating Status Capsule (Clean, Rapport-Preserving) */
               <div className="absolute top-4 right-4 z-20 flex flex-col items-end gap-2 max-w-sm pointer-events-auto">
@@ -337,8 +357,8 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
               </div>
             )}
 
-            {/* Clinician Self-View */}
-            <div className="absolute top-4 left-4 w-52 aspect-video bg-[#09090B] rounded-xl overflow-hidden border border-white/40 shadow-xl z-20">
+            {/* Clinician Self-View (Responsive scaling) */}
+            <div className="absolute top-3 left-3 w-28 sm:w-36 md:w-44 lg:w-52 aspect-video bg-[#09090B] rounded-xl overflow-hidden border border-white/40 shadow-xl z-20">
               <video 
                 ref={localVideoRef} 
                 autoPlay 
@@ -348,6 +368,26 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
               />
             </div>
           </div>
+
+          {/* Responsive Diagnostic HUD Docked Below Video on screens < 1024px to prevent overflow (UI-01) */}
+          {viewMode === 'diagnostic' && (
+            <div className="block lg:hidden w-full">
+              <ModalityRadarHUD
+                rawStress={fusionResult?.fusedSeverityScore ?? (isSimulating ? scenarioProfile.linguisticSeverity : rawStressScore)}
+                emaStress={fusionResult?.fusedSeverityScore ?? (isSimulating ? scenarioProfile.linguisticSeverity : emaStressScore)}
+                discrepancy={fusionResult?.discrepancyD ?? (isSimulating ? 3.8 : discrepancyValue)}
+                isAlertActive={fusionResult?.isMaskingAlertActive ?? (isSimulating && activeScenario === 'masked')}
+                au4BrowDown={effectiveAU4}
+                au15MouthFrown={effectiveAU15}
+                speechJitter={effectiveJitter}
+                pitchHz={effectivePitch}
+                pitchVariance={effectiveVariance}
+                isFlatAffect={effectiveFlatAffect}
+                isVoiced={effectiveVoiced}
+                attentionWeights={fusionResult?.attentionWeights}
+              />
+            </div>
+          )}
 
           {/* Control Bar & Quick Actions */}
           <div className="p-3.5 bg-white/95 backdrop-blur-sm border border-[#E4E4E7] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.02),0_4px_16px_rgba(0,0,0,0.02)] flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -499,6 +539,7 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
             patientId={patientId}
             primaryDiagnosis={patient.primaryDiagnosis}
             attentionWeights={fusionResult?.attentionWeights}
+            patientConsentToken={hasConsent ? consentToken : undefined}
           />
         </div>
       )}

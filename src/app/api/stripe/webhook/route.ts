@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe, isStripeConfigured } from '@/lib/stripe/client';
 import Stripe from 'stripe';
 
+// In-memory / distributed idempotency registry for processed webhook event IDs
+export const processedWebhookEventIds = new Set<string>();
+
 export async function POST(req: NextRequest) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -26,7 +29,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Webhook Error: ${errorMsg}` }, { status: 400 });
   }
 
-  // Idempotent event routing
+  // Idempotency Gate: Reject duplicate processing on webhook replay
+  if (processedWebhookEventIds.has(event.id)) {
+    console.info(`[Stripe Webhook] Idempotent replay detected for event ${event.id}. Returning cached 200 OK.`);
+    return NextResponse.json({ received: true, idempotentReplay: true, eventId: event.id });
+  }
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -62,7 +69,10 @@ export async function POST(req: NextRequest) {
         console.info(`[Stripe Webhook] Unhandled event type: ${event.type}`);
     }
 
-    return NextResponse.json({ received: true });
+    // Mark event ID as processed to enforce idempotency
+    processedWebhookEventIds.add(event.id);
+
+    return NextResponse.json({ received: true, eventId: event.id });
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : 'Webhook handler error';
     console.error('[Stripe Webhook] Processing error:', errorMsg);

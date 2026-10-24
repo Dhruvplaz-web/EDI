@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import * as admin from 'firebase-admin';
 import { z } from 'zod';
 import { DEFAULT_DEMO_ORG_ID } from '@/lib/tenant/context';
+import { verifySignedSessionToken } from '@/lib/auth/session';
 
 const intakeFormSchema = z.object({
   symptoms: z.string().min(3).max(2000),
@@ -20,17 +21,21 @@ const intakeFormSchema = z.object({
   phq9Score: z.number().optional(),
   gad7Score: z.number().optional(),
   discrepancyD: z.number().optional(),
-  orgId: z.string().optional(),
+  consentGiven: z.boolean().optional(),
 });
 
 export async function submitIntake(formData: Record<string, unknown>) {
   try {
     const cookieStore = await cookies();
-    const role = cookieStore.get('user_role')?.value;
     const sessionToken = cookieStore.get('session')?.value;
 
-    if (!sessionToken || role !== 'patient') {
-      return { success: false, error: 'Unauthorized. An active patient session is required to submit clinical intake.' };
+    // Cryptographically verify session token - NEVER trust raw user_role or raw client input
+    const verifiedSession = await verifySignedSessionToken(sessionToken);
+    if (!verifiedSession || verifiedSession.role !== 'patient') {
+      return { 
+        success: false, 
+        error: 'Unauthorized: A cryptographically verified patient session is required to submit clinical intake.' 
+      };
     }
 
     // Validate payload with Zod
@@ -41,11 +46,9 @@ export async function submitIntake(formData: Record<string, unknown>) {
 
     const validData = parseResult.data;
 
-    // Resolve patient identity from session token (or deterministic session id), never a static mock ID
-    const sessionUid = cookieStore.get('patient_uid')?.value || 
-      `PAT-${sessionToken.replace(/[^a-zA-Z0-9]/g, '').slice(-8).toUpperCase()}`;
-
-    const orgId = validData.orgId || cookieStore.get('user_org')?.value || DEFAULT_DEMO_ORG_ID;
+    // Derive patientId and orgId strictly from the cryptographically verified session token
+    const sessionUid = verifiedSession.uid;
+    const orgId = verifiedSession.orgId || DEFAULT_DEMO_ORG_ID;
 
     const intakeDoc = {
       patientId: sessionUid,

@@ -52,13 +52,12 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
-    // Patients collection: isolated by orgId
+    // Patients collection: strictly isolated by tenant orgId & patient ID
     match /patients/{patientId} {
       allow read: if isAuthenticated() && (
         isSuperAdmin() ||
         (isClinicalStaff() && resource.data.orgId == userOrgId()) ||
-        (isPatient() && patientId == request.auth.uid) ||
-        resource.data.isDemo == true
+        (isPatient() && patientId == request.auth.uid)
       );
       allow write: if isAuthenticated() && (
         isSuperAdmin() ||
@@ -71,12 +70,11 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         isSuperAdmin() ||
         (isClinicalStaff() && resource.data.orgId == userOrgId()) ||
-        (isPatient() && resource.data.patientId == request.auth.uid) ||
-        resource.data.isDemo == true
+        (isPatient() && resource.data.patientId == request.auth.uid)
       );
       allow create: if isAuthenticated() && (
         isSuperAdmin() ||
-        (isPatient() && request.resource.data.patientId == request.auth.uid) ||
+        (isPatient() && request.resource.data.patientId == request.auth.uid && request.resource.data.orgId == userOrgId()) ||
         (isClinicalStaff() && request.resource.data.orgId == userOrgId())
       );
       allow update: if isAuthenticated() && (
@@ -86,13 +84,12 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
-    // Sessions & Telemetry: isolated by orgId
+    // Sessions & Telemetry: strictly isolated by orgId
     match /sessions/{sessionId} {
       allow read: if isAuthenticated() && (
         isSuperAdmin() ||
         (isClinicalStaff() && resource.data.orgId == userOrgId()) ||
-        (isPatient() && resource.data.patientId == request.auth.uid) ||
-        resource.data.isDemo == true
+        (isPatient() && resource.data.patientId == request.auth.uid)
       );
       allow write: if isAuthenticated() && (
         isSuperAdmin() ||
@@ -101,22 +98,30 @@ service cloud.firestore {
     }
 
     // WebRTC Real-Time Signaling (Audio/Video Consultation Rooms)
+    // Strictly limited to authenticated call participants (Clinician & Patient)
     match /calls/{callId} {
-      allow read, write: if isAuthenticated() && (
-        isSuperAdmin() ||
-        resource == null ||
-        resource.data.clinicianId == request.auth.uid ||
-        resource.data.patientId == request.auth.uid ||
-        request.resource.data.clinicianId == request.auth.uid ||
-        request.resource.data.patientId == request.auth.uid
-      );
+      function isParticipant() {
+        return isSuperAdmin() ||
+          (resource != null && (resource.data.clinicianId == request.auth.uid || resource.data.patientId == request.auth.uid)) ||
+          (resource == null && (request.resource.data.clinicianId == request.auth.uid || request.resource.data.patientId == request.auth.uid));
+      }
+
+      allow read, write: if isAuthenticated() && isParticipant();
 
       match /offerCandidates/{candidateId} {
-        allow read, write: if isAuthenticated();
+        allow read, write: if isAuthenticated() && (
+          isSuperAdmin() ||
+          get(/databases/$(database)/documents/calls/$(callId)).data.clinicianId == request.auth.uid ||
+          get(/databases/$(database)/documents/calls/$(callId)).data.patientId == request.auth.uid
+        );
       }
 
       match /answerCandidates/{candidateId} {
-        allow read, write: if isAuthenticated();
+        allow read, write: if isAuthenticated() && (
+          isSuperAdmin() ||
+          get(/databases/$(database)/documents/calls/$(callId)).data.clinicianId == request.auth.uid ||
+          get(/databases/$(database)/documents/calls/$(callId)).data.patientId == request.auth.uid
+        );
       }
     }
 

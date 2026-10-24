@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { synthesizeSOAPNote } from "@/lib/telemetry/soap-generator";
 import { cookies } from "next/headers";
+import { verifySignedSessionToken } from "@/lib/auth/session";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const generateSoapSchema = z.object({
   patientId: z.string().min(1),
@@ -16,6 +18,7 @@ const generateSoapSchema = z.object({
   discrepancyD: z.number().min(0).max(10).optional(),
   discrepancyAlert: z.boolean().optional(),
   sessionTranscript: z.string().max(50000).optional(),
+  patientConsentToken: z.string().optional(),
   attentionWeights: z.object({
     acoustic: z.number().optional(),
     visual: z.number().optional(),
@@ -23,55 +26,72 @@ const generateSoapSchema = z.object({
   }).optional(),
 });
 
-// Simple in-memory rate limiter per session/user (15 requests/minute)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(identifier: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(identifier);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(identifier, { count: 1, resetAt: now + 60000 });
-    return true;
-  }
-  if (entry.count >= 15) {
-    return false;
-  }
-  entry.count++;
-  return true;
-}
-
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authenticate caller (Clinician / Clinical Director / Super Admin)
+    // 1. Authenticate caller using cryptographic session verification
     const cookieStore = await cookies();
-    const session = cookieStore.get("session")?.value;
-    const userRole = cookieStore.get("user_role")?.value;
+    const sessionToken = cookieStore.get("session")?.value;
 
-    if (!session || !userRole) {
-      return NextResponse.json({ error: "Unauthorized: Clinician authentication required." }, { status: 401 });
+    const verifiedSession = await verifySignedSessionToken(sessionToken);
+    if (!verifiedSession) {
+      return NextResponse.json(
+        { error: "Unauthorized: Cryptographically verified session required." },
+        { status: 401 }
+      );
     }
 
+    const { role: userRole, uid: userUid } = verifiedSession;
     if (!["clinician", "clinical_director", "nurse", "super_admin"].includes(userRole)) {
-      return NextResponse.json({ error: "Forbidden: Clinical authorization required to generate SOAP documentation." }, { status: 403 });
+      return NextResponse.json(
+        { error: "Forbidden: Clinical authorization required to generate SOAP documentation." },
+        { status: 403 }
+      );
     }
 
-    // 2. Rate Limiting
-    if (!checkRateLimit(session)) {
-      return NextResponse.json({ error: "Rate limit exceeded. Maximum 15 SOAP requests per minute." }, { status: 429 });
+    // 2. Distributed Rate Limiting (Upstash / Redis, fail-closed in production)
+    const rateLimit = await checkRateLimit(userUid, 15, 60000);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Maximum 15 SOAP requests per minute." },
+        { status: 429 }
+      );
     }
 
     // 3. Payload validation
     const jsonBody = await req.json();
     const parseResult = generateSoapSchema.safeParse(jsonBody);
     if (!parseResult.success) {
-      return NextResponse.json({ error: "Invalid clinical telemetry payload", details: parseResult.error.format() }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid clinical telemetry payload", details: parseResult.error.format() },
+        { status: 400 }
+      );
     }
 
     const body = parseResult.data;
+
+    // 4. Regulatory Patient Consent Gate (REG-01)
+    // Audio/Visual telemetry and AI synthesis CANNOT execute without documented patient consent
+    if (!body.patientConsentToken) {
+      return NextResponse.json(
+        { 
+          error: "Consent Required: Patient biometric & telemetry consent must be granted before generating AI documentation.",
+          code: "PATIENT_CONSENT_REQUIRED"
+        },
+        { status: 403 }
+      );
+    }
+
+    // 5. Cloud LLM / BAA Gate
+    // CRITICAL COMPLIANCE SAFEGUARD:
+    // Safe Harbor (45 CFR § 164.514(b)) de-identifies explicit identifiers (names, IDs),
+    // but unstructured clinical transcripts may retain latent PHI or re-identifiable voice/semantic traits.
+    // Therefore, Gemini cloud enrichment is DISABLED BY DEFAULT unless a signed Business Associate
+    // Agreement (BAA) with Google Cloud Healthcare is explicitly declared.
+    const isBaaSigned = process.env.GOOGLE_CLOUD_HEALTHCARE_BAA_SIGNED === 'true';
+    const isGeminiEnabled = process.env.GEMINI_ENABLED === 'true';
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
 
-    // 4. Safe de-identified cloud enrichment (PHI redaction)
-    if (apiKey) {
+    if (isBaaSigned && isGeminiEnabled && apiKey) {
       try {
         // Redact Direct Identifiers under HIPAA Safe Harbor (45 CFR § 164.514(b))
         const pseudonym = `PATIENT_HASH_${body.patientId.slice(-4)}`;

@@ -39,9 +39,9 @@ export function ModalityRadarHUD({
   const isHighJitter = speechJitter >= 2.5;
 
   return (
-    <div className="absolute top-4 right-4 z-30 space-y-2.5 pointer-events-auto max-w-xs font-sans text-left">
+    <div className="w-full lg:w-auto lg:absolute lg:top-4 lg:right-4 z-30 space-y-2.5 pointer-events-auto max-w-full lg:max-w-xs font-sans text-left">
       {/* Live Stress Gauge Overlay - Luxury Frosted White Glass */}
-      <div className="p-4 rounded-xl border border-[#E4E4E7] bg-white/95 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_20px_rgba(0,0,0,0.02)] transition-all">
+      <div className="p-3 sm:p-4 rounded-xl border border-[#E4E4E7] bg-white/95 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_20px_rgba(0,0,0,0.02)] transition-all">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <span className="w-2 h-2 rounded-full bg-[#0066FF] animate-pulse" />

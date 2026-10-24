@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   Users, ChevronDown, ChevronUp, BrainCircuit, UserCheck, Video, 
@@ -63,7 +63,7 @@ export function TriageBoardClient({ role, canWriteNotes }: { role: string | unde
     }
   };
 
-  const defaultQueueItems: TriageQueueItem[] = [
+  const defaultQueueItems: TriageQueueItem[] = useMemo(() => [
     {
       id: "PAT-99201",
       docId: "doc-99201",
@@ -214,7 +214,7 @@ export function TriageBoardClient({ role, canWriteNotes }: { role: string | unde
       claimedByName: null,
       raw: {}
     }
-  ];
+  ], []);
 
   useEffect(() => {
     try {
@@ -264,7 +264,7 @@ export function TriageBoardClient({ role, canWriteNotes }: { role: string | unde
         setLoading(false);
       }, 0);
     }
-  }, []);
+  }, [defaultQueueItems]);
 
   const handleClaimPatient = async (patientDocId: string) => {
     setClaimingId(patientDocId);

@@ -3,25 +3,25 @@ import { AcousticSignalAnalyzer } from '@/lib/telemetry/acoustic-analyzer';
 import { CrossAttentionFusionEngine } from '@/lib/telemetry/cross-attention-fusion';
 import { LinguisticSentimentAnalyzer } from '@/lib/telemetry/linguistic-sentiment';
 
-describe('Performance & Load Benchmark: 100 Concurrent Telemetry Pipelines', () => {
-  it('processes 100 concurrent simulated clinician sessions with p95 < 20ms', () => {
+describe('DSP Microbenchmark: In-Process Multimodal Telemetry Pipeline', () => {
+  it('benchmarks 100 sequential DSP audio + linguistic + fusion cycles with p95 < 25ms', () => {
     const concurrentSessions = 100;
     const sampleRate = 44100;
-    const frameSize = 2048; // ~46ms of audio
+    const frameSize = 2048; // ~46ms audio buffer
     const latencies: number[] = [];
 
-    // Pre-allocate audio buffer (150 Hz tone with slight jitter)
+    // Pre-allocate audio buffer (150 Hz tone with slight harmonic jitter)
     const testPcm = new Float32Array(frameSize);
     for (let i = 0; i < frameSize; i++) {
       testPcm[i] = 0.5 * Math.sin((2 * Math.PI * 150 * i) / sampleRate);
     }
 
-    // Instantiate concurrent pipeline engines
+    // Instantiate pipeline engines
     const acousticAnalyzers = Array.from({ length: concurrentSessions }, () => new AcousticSignalAnalyzer(sampleRate));
     const fusionEngines = Array.from({ length: concurrentSessions }, () => new CrossAttentionFusionEngine());
     const nlpAnalyzers = Array.from({ length: concurrentSessions }, () => new LinguisticSentimentAnalyzer());
 
-    // Execute full multimodal pipeline cycle across all 100 concurrent sessions
+    // Execute full multimodal pipeline cycle across all 100 iterations
     for (let i = 0; i < concurrentSessions; i++) {
       const tStart = performance.now();
 
@@ -62,7 +62,7 @@ describe('Performance & Load Benchmark: 100 Concurrent Telemetry Pipelines', () 
     const p95 = latencies[Math.floor(latencies.length * 0.95)];
     const p99 = latencies[Math.floor(latencies.length * 0.99)];
 
-    console.info(`[Load Test Results - 100 Concurrent Pipelines]: p50=${p50.toFixed(2)}ms, p95=${p95.toFixed(2)}ms, p99=${p99.toFixed(2)}ms`);
+    console.info(`[DSP Microbenchmark Results - 100 Frames]: p50=${p50.toFixed(2)}ms, p95=${p95.toFixed(2)}ms, p99=${p99.toFixed(2)}ms`);
 
     // Budget: Edge frame processing must complete within standard audio slice window (<46ms), budget target <25ms
     expect(p50).toBeLessThan(15);

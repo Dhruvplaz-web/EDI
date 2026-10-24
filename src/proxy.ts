@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { verifySignedSessionToken } from '@/lib/auth/session';
 
 const environmentMapping: Record<string, string[]> = {
   patient: ['/patient'],
@@ -40,8 +41,7 @@ const PUBLIC_PATHS = [
 ];
 
 export async function proxy(request: NextRequest) {
-  const session = request.cookies.get('session')?.value;
-  const userRole = request.cookies.get('user_role')?.value;
+  const sessionCookie = request.cookies.get('session')?.value;
   const pathname = request.nextUrl.pathname;
 
   // Ignore static assets and Next internal paths
@@ -60,11 +60,17 @@ export async function proxy(request: NextRequest) {
 
   const isPublicRoute = PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(`${p}/`));
 
-  // If unauthenticated
-  if (!session || !userRole) {
+  // Cryptographically verify session token (HMAC-SHA256 signature and expiration)
+  // NEVER read or trust raw user_role cookies from the client!
+  const verifiedPayload = await verifySignedSessionToken(sessionCookie);
+
+  if (!verifiedPayload) {
     if (!isPublicRoute) {
       if (pathname.startsWith('/api/')) {
-        return NextResponse.json({ error: 'Unauthorized: Session authentication required.' }, { status: 401 });
+        return NextResponse.json(
+          { error: 'Unauthorized: Valid cryptographically signed session required.' },
+          { status: 401 }
+        );
       }
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);
@@ -72,6 +78,11 @@ export async function proxy(request: NextRequest) {
     }
     return NextResponse.next();
   }
+
+  // Derive role and orgId strictly from the cryptographically verified token
+  const userRole = verifiedPayload.role;
+  const orgId = verifiedPayload.orgId;
+  const uid = verifiedPayload.uid;
 
   // Authenticated user validation
   const allowedPrefixes = environmentMapping[userRole];
@@ -116,7 +127,23 @@ export async function proxy(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden: Admin role required.' }, { status: 403 });
   }
 
-  return NextResponse.next();
+  // Forward verified identity headers for downstream handlers and server components
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-verified-uid', uid);
+  requestHeaders.set('x-verified-role', userRole);
+  requestHeaders.set('x-verified-org', orgId);
+
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+
+  response.headers.set('x-verified-uid', uid);
+  response.headers.set('x-verified-role', userRole);
+  response.headers.set('x-verified-org', orgId);
+
+  return response;
 }
 
 export const config = {

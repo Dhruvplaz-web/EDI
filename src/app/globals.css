@@ -133,3 +133,15 @@
   padding: 0.25rem 0.65rem;
   border-radius: 9999px;
 }
+
+/* Global WCAG 2.2 AA Accessible Focus Indicators (UI-04) */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #0066FF !important;
+  outline-offset: 2px !important;
+}

@@ -48,7 +48,10 @@ interface SpeechRecognitionInstance {
   stop: () => void;
 }
 
-export function useLiveTranscription(autoStart: boolean = true): LiveTranscriptionHook {
+export function useLiveTranscription(
+  hasConsent: boolean = false,
+  autoStart: boolean = false
+): LiveTranscriptionHook {
   const [isListening, setIsListening] = useState(false);
   const [isSupported] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -87,6 +90,14 @@ export function useLiveTranscription(autoStart: boolean = true): LiveTranscripti
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    // Consent Gate: Immediately halt transcription if consent is not granted or revoked
+    if (!hasConsent) {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
+      }
+      return;
+    }
 
     const windowWithSpeech = window as unknown as {
       SpeechRecognition?: new () => SpeechRecognitionInstance;
@@ -130,15 +141,15 @@ export function useLiveTranscription(autoStart: boolean = true): LiveTranscripti
 
       recognition.onend = () => {
         setIsListening(false);
-        // Automatically restart if not manually stopped
-        if (!isManuallyStopped.current && autoStart) {
+        // Automatically restart if not manually stopped and consent is active
+        if (!isManuallyStopped.current && autoStart && hasConsent) {
           try {
             recognition.start();
           } catch {}
         }
       };
 
-      if (autoStart) {
+      if (autoStart && hasConsent) {
         try {
           recognition.start();
         } catch {}
@@ -154,9 +165,13 @@ export function useLiveTranscription(autoStart: boolean = true): LiveTranscripti
         try { recognitionRef.current.stop(); } catch {}
       }
     };
-  }, [autoStart, processUtterance]);
+  }, [hasConsent, autoStart, processUtterance]);
 
   const startTranscription = () => {
+    if (!hasConsent) {
+      console.warn("[useLiveTranscription] Cannot start speech recognition: Patient consent required (REG-01).");
+      return;
+    }
     isManuallyStopped.current = false;
     if (recognitionRef.current) {
       try { recognitionRef.current.start(); } catch {}
