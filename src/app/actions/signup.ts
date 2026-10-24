@@ -235,10 +235,11 @@ export async function inviteUserToOrg(
       const orgDoc = await adminDb.collection('organizations').doc(orgId).get();
       if (orgDoc.exists) {
         const sub = orgDoc.data()?.subscription as OrgSubscriptionInfo;
-        if (sub && sub.currentSeats >= sub.maxSeats) {
+        const maxSeats = sub?.maxSeats ?? 10;
+        if (sub && sub.currentSeats >= maxSeats) {
           return {
             success: false,
-            error: `Seat capacity limit reached (${sub.currentSeats}/${sub.maxSeats}). Please upgrade subscription seats.`,
+            error: `Seat capacity limit reached (${sub.currentSeats}/${maxSeats}). Please upgrade subscription seats.`,
           };
         }
       }
@@ -289,7 +290,8 @@ export async function acceptOrgInvite(
         const orgSnap = await transaction.get(orgRef);
         if (!orgSnap.exists) throw new Error('Organization not found');
         const sub = orgSnap.data()?.subscription as OrgSubscriptionInfo;
-        if (sub.currentSeats >= sub.maxSeats) {
+        const maxSeats = sub?.maxSeats ?? 10;
+        if (sub.currentSeats >= maxSeats) {
           throw new Error('All organization seats are currently occupied.');
         }
 

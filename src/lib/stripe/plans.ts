@@ -182,7 +182,7 @@ export interface OrgSubscriptionInfo {
   tier?: PlanTier;
   status: SubscriptionStatus;
   currentSeats: number;
-  maxSeats: number;
+  maxSeats?: number;
   trialEndsAt?: number;
   pastDueSince?: number;
   currency?: 'INR' | 'USD';
@@ -196,9 +196,11 @@ export interface OrgSubscriptionInfo {
  * verifies seat count, and rejects missing tiers with zero default fallback.
  */
 export function hasFeatureEntitlement(
-  subscriptionOrTier: OrgSubscriptionInfo | PlanTier,
-  feature: keyof typeof SAAS_PLANS['starter']['entitlements']
+  subscriptionOrTier?: OrgSubscriptionInfo | PlanTier | null,
+  feature?: keyof typeof SAAS_PLANS['starter']['entitlements']
 ): boolean {
+  if (!subscriptionOrTier || !feature) return false;
+
   // If string passed directly, evaluate tier default capabilities
   if (typeof subscriptionOrTier === 'string') {
     const plan = SAAS_PLANS[subscriptionOrTier];
@@ -216,7 +218,8 @@ export function hasFeatureEntitlement(
   if (!plan) return false;
 
   // Enforce seat limit check
-  if (sub.currentSeats > plan.maxSeats) {
+  const allowedSeats = sub.maxSeats ?? plan.maxSeats;
+  if (sub.currentSeats > allowedSeats) {
     return false;
   }
 

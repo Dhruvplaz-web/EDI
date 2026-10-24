@@ -84,8 +84,8 @@ export async function getOrgFeatureFlags(orgId: string): Promise<OrgFeatureFlags
   let metadata: ResearchModeMetadata | undefined;
 
   try {
-    const shouldQueryDb = adminDb && (process.env.NODE_ENV !== 'test' || Boolean(process.env.FIRESTORE_EMULATOR_HOST));
-    if (shouldQueryDb) {
+    const shouldQueryDb = Boolean(adminDb && (process.env.NODE_ENV !== 'test' || Boolean(process.env.FIRESTORE_EMULATOR_HOST)));
+    if (adminDb && shouldQueryDb) {
       const doc = await adminDb
         .collection('organizations')
         .doc(orgId)
@@ -132,8 +132,8 @@ export async function getOrgResearchMetadata(orgId: string): Promise<ResearchMod
   }
 
   try {
-    const shouldQueryDb = adminDb && (process.env.NODE_ENV !== 'test' || Boolean(process.env.FIRESTORE_EMULATOR_HOST));
-    if (shouldQueryDb) {
+    const shouldQueryDb = Boolean(adminDb && (process.env.NODE_ENV !== 'test' || Boolean(process.env.FIRESTORE_EMULATOR_HOST)));
+    if (adminDb && shouldQueryDb) {
       const doc = await adminDb
         .collection('organizations')
         .doc(orgId)
@@ -246,8 +246,8 @@ export async function updateOrgFeatureFlags(
 
   // 3. Persist to Firestore
   try {
-    const shouldQueryDb = adminDb && (process.env.NODE_ENV !== 'test' || Boolean(process.env.FIRESTORE_EMULATOR_HOST));
-    if (shouldQueryDb) {
+    const shouldQueryDb = Boolean(adminDb && (process.env.NODE_ENV !== 'test' || Boolean(process.env.FIRESTORE_EMULATOR_HOST)));
+    if (adminDb && shouldQueryDb) {
       await adminDb
         .collection('organizations')
         .doc(orgId)

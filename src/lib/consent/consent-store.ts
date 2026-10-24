@@ -42,6 +42,7 @@ export interface PatientConsentRecord {
   // Backwards compatibility alias
   scope: (ConsentScope | string)[];
   noticeVersion: string;
+  policyVersion?: string; // Legacy alias for noticeVersion
   language: SupportedLanguage;
   timestamp: number;
   revoked: boolean;
@@ -166,6 +167,7 @@ export async function recordPatientConsent(data: {
   purposes?: Partial<Record<ConsentPurpose, boolean>>;
   scope?: (ConsentScope | string)[];
   noticeVersion?: string;
+  policyVersion?: string; // Legacy alias
   language?: SupportedLanguage;
   guardianConsent?: GuardianConsentRecord;
   isMinor?: boolean;
@@ -190,12 +192,15 @@ export async function recordPatientConsent(data: {
     legacyScope.push('ai_documentation', 'transcription', 'storage_sharing');
   }
 
+  const noticeVer = data.noticeVersion || data.policyVersion || 'dpdp_v2.1';
+
   const record: PatientConsentRecord = {
     patientId: data.patientId,
     orgId: data.orgId,
     purposes,
     scope: Array.from(new Set(legacyScope)),
-    noticeVersion: data.noticeVersion || 'dpdp_v2.1',
+    noticeVersion: noticeVer,
+    policyVersion: noticeVer,
     language: data.language || 'en',
     timestamp: data.timestamp || Date.now(),
     revoked: false,
