@@ -47,7 +47,7 @@ export function PatientConsultClient({ consultId }: { consultId: string }) {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-800/50 px-2.5 py-0.5 rounded-full">
-            HIPAA Encrypted
+            DPDP Encrypted (India)
           </span>
           <Link href="/patient/dashboard" className="text-xs text-slate-300 hover:text-white bg-slate-900/60 border border-slate-700/60 px-3 py-1 rounded-full transition-colors">
             Exit to Dashboard

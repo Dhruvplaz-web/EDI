@@ -88,7 +88,7 @@ export default function AdminBillingPage() {
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage your clinic&apos;s active seats, plan tier, and HIPAA Business Associate Agreement entitlements.
+            Manage your clinic&apos;s active seats, plan tier, and DPDP Data Processing Agreement entitlements.
           </p>
         </div>
 
@@ -190,7 +190,7 @@ export default function AdminBillingPage() {
           <CardContent className="pt-1">
             <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>HIPAA BAA Agreement Active & Signed</span>
+              <span>DPDP Data Processing Agreement (DPA) Active</span>
             </div>
           </CardContent>
         </Card>

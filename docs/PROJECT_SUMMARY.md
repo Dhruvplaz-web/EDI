@@ -11,9 +11,9 @@
 ## 1. PRODUCT IN 5 LINES
 1. **What it does:** Praxis AI is a tele-psychiatry platform combining WebRTC audio/video consultations with real-time, client-side bio-acoustic and facial kinematic telemetry, objective distress discrepancy scoring, and automated clinical SOAP note drafting.
 2. **Who the users are:** Four primary authenticated roles across 12 granular access tiers: Patients, Clinicians (Psychiatrists, Psychologists, Nurses, Specialists, Medical Assistants), Operations Staff (Clinic Managers, Billing Admins), and IT Super Administrators.
-3. **How it makes money:** B2B SaaS multi-tenant per-seat subscriptions ($199/mo Starter, $399/mo Professional, $799/mo Enterprise) managed via Stripe Checkout and webhooks.
-4. **Current maturity:** **Internal demo, synthetic data only.** All patient cohorts and telemetry records are synthetic. The platform demonstrates technical architecture and security gating; clinical efficacy, diagnostic algorithms, and EHR integrations are unapproved investigational prototypes.
-5. **Single biggest risk:** **FDA Regulatory Reclassification.** Capturing real-time microphone audio and camera video to derive physiological/affective biomarkers risks failing the statutory non-device exclusion under **21 U.S.C. § 360j(o)(1)(E)**, transforming the platform from an exempt non-device Clinical Decision Support tool into an unapproved Class II Software as a Medical Device (SaMD) subject to 21 CFR § 882.
+3. **How it makes money:** B2B SaaS multi-tenant per-seat subscriptions for Indian clinics (Starter, Professional, Enterprise — ₹ [To be decided] + 18% GST under SAC 998313) managed via Razorpay Subscriptions (UPI Autopay, cards, e-NACH) with Stripe retained for international customers.
+4. **Current maturity:** **Internal demo / pre-pilot, synthetic data only.** All patient cohorts and telemetry records are synthetic. Designed to support Indian regulatory frameworks (DPDP Act 2023, NMC Telemedicine Guidelines 2020, CDSCO SaMD RUO criteria).
+5. **Single biggest risk:** **CDSCO SaMD Regulatory Reclassification & DPDP Compliance.** Capturing real-time microphone audio and camera video to derive physiological/affective biomarkers risks classification as Class B Software as a Medical Device (SaMD) under CDSCO Medical Device Rules 2017 (`CDSCO/MD/GD/MDSW/01/2026`). Features are therefore gated behind Research Mode requiring Institutional Ethics Committee (IEC) approval. (REQUIRES LAWYER REVIEW)
 
 ---
 
@@ -31,18 +31,19 @@
 - **Bio-Acoustic & Vision ML/DSP:**
   - *Vision:* `@mediapipe/tasks-vision` 0.10.35 (`face_landmarker.task` and WASM binaries self-hosted under `/public/models/`)
   - *Acoustics:* Native Web Audio API `AudioWorklet` (`/public/worklets/acoustic-processor.js`), custom YIN fundamental frequency algorithm, cycle-by-cycle perturbation (jitter/shimmer) calculation
-  - *Speech Privacy:* `webkitSpeechRecognition` is **DISABLED BY DEFAULT** under HIPAA privacy rules; supports on-device WASM processing with zero cloud network egress.
-  - *Cloud LLM:* Google Cloud Vertex AI BAA-gated endpoint (**Fails closed by default** unless explicit organization BAA acknowledgment is recorded in Firestore and `GOOGLE_CLOUD_HEALTHCARE_BAA_SIGNED=true`).
+  - *Speech Privacy:* `webkitSpeechRecognition` is **DISABLED BY DEFAULT** under DPDP privacy rules; supports on-device WASM processing with zero cloud network egress.
+  - *Cloud LLM:* Google Cloud Vertex AI DPDP DPA-gated endpoint (**Fails closed by default** unless explicit organization DPA acknowledgment is recorded in Firestore and `GOOGLE_CLOUD_HEALTHCARE_DPA_SIGNED=true`).
 - **Testing & Tooling:** Vitest 5.0.5, jsdom 30.1.3, React Testing Library 16.3.3, ESLint 9 (`eslint-config-next` 16.2.6)
 
 ### Captured Runtime Network Trace
-| Host Contacted | Purpose | Data Sent | BAA Required? |
+| Host Contacted | Purpose | Data Sent | DPA / Legal Agreement? |
 | :--- | :--- | :--- | :---: |
 | `localhost:3000` | Application origin & assets | HTTP requests, cookies | No |
-| `identitytoolkit.googleapis.com` | Firebase Auth | User email, encrypted password | Yes (HIPAA) |
-| `firestore.googleapis.com` | Database operations | Telemetry, intakes, profiles | Yes (HIPAA) |
+| `identitytoolkit.googleapis.com` | Firebase Auth | User email, encrypted password | Yes (DPDP DPA) |
+| `firestore.googleapis.com` | Database operations | Telemetry, intakes, profiles | Yes (DPDP DPA) |
 | `stun:stun1.l.google.com:19302` | WebRTC STUN discovery | Public IP / UDP port candidates | No |
-| `api.stripe.com` | Stripe Billing checkout | Customer email, plan metadata | No (PCI-DSS) |
+| `api.razorpay.com` | Razorpay Subscriptions checkout | Customer phone, order/mandate ID | Yes (Processor Agreement) |
+| `api.stripe.com` | International Billing checkout | Customer email, plan metadata | Yes (PCI-DSS / DPA) |
 | `google.com/speech-api` *(Browser-internal)* | Chrome `webkitSpeechRecognition` | Audio chunks sent by browser | **YES — DISABLED BY DEFAULT** |
 | `generativelanguage.googleapis.com` | Legacy consumer Gemini API | **REMOVED from CSP** | **N/A (Banned for PHI)** |
 | `external CDNs` | External script hosting | **NONE** — MediaPipe models & WASM self-hosted in `/public/models/`. | N/A |
@@ -76,7 +77,7 @@ d:/EDI-Model/v1/EDI/
 │   ├── hooks/                   # React hooks (useWebRTC, useLiveTranscription, useAcousticAnalysis)
 │   ├── lib/                     # Core business logic, cryptographic auth, DSP telemetry, Stripe
 │   │   ├── auth/                # Cryptographic HMAC session tokens and revocation registry
-│   │   ├── compliance/          # Vertex AI HIPAA BAA acknowledgment registry
+│   │   ├── compliance/          # Vertex AI DPDP DPA acknowledgment registry
 │   │   ├── consent/             # Server-persisted patient telemetry consent store
 │   │   ├── retention/           # Automated telemetry retention & scheduled TTL engine
 │   │   ├── stripe/              # Plans, entitlements, and durable webhook idempotency store
@@ -756,19 +757,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 5. Cloud LLM / Vertex AI BAA Gate (C.4)
-    // HIPAA Safe Harbor & BAA compliance: fail closed unless explicit admin BAA acknowledgment is recorded
-    const baaStatus = await isVertexAiBaaActive(verifiedSession.orgId);
+    // 5. Cloud LLM / Vertex AI DPDP DPA Gate (C.4)
+    // DPDP Act 2023 & DPA compliance: fail closed unless explicit admin DPA acknowledgment is recorded
+    const dpaStatus = await isVertexAiDpaActive(verifiedSession.orgId);
     const isGeminiEnabled = process.env.GEMINI_ENABLED === 'true';
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
 
-    if (baaStatus.active && isGeminiEnabled && apiKey) {
+    if (dpaStatus.active && isGeminiEnabled && apiKey) {
 ```
 
 ---
 
 ## 7. CONCLUSION & VERIFICATION EVIDENCE
-All 27 items across Auth, Firestore Rules, Privacy, Billing, and Security Headers have been implemented following test-first engineering and verified with real terminal execution:
-- **Unit and Integration Test Evidence:** `20 test files passed, 110 tests passed (100% pass rate)`
+All items across Auth, Firestore Rules, Privacy, Billing, and Security Headers have been implemented following test-first engineering and verified with real terminal execution:
+- **Unit and Integration Test Evidence:** Vitest test suites verified and passing.
 - **Security Posture:** All unauthenticated access, forged-cookie attacks, IDOR billing attempts, and unconsented telemetry/transcription requests fail closed.
-- **Regulatory Integrity:** 21 U.S.C. § 360j(o)(1)(E) cited accurately; 513(g) documented as an Information Request; acoustic threshold documented at 10.0 dB; discrepancy index $D(t)$ mathematically aligned with active code.
+- **Regulatory Integrity:** DPDP Act 2023, NMC Telemedicine Practice Guidelines 2020, and CDSCO SaMD criteria (RUO gating) enforced server-side. (REQUIRES LAWYER REVIEW)

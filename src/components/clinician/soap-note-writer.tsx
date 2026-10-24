@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { FileText, Check, Copy, Sparkles, Loader2, Save, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { FileText, Check, Copy, Sparkles, Loader2, Save, AlertTriangle, ShieldCheck, Microscope } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClinicalSignalEngine } from '@/lib/telemetry/signal-engine';
@@ -27,7 +27,9 @@ interface SOAPNoteWriterProps {
     linguistic: number;
   };
   patientConsentToken?: string;
-  onSaveSOAP?: (soap: { subjective: string; objective: string; assessment: string; plan: string }) => void;
+  isResearchMode?: boolean;
+  ethicsRef?: string;
+  onSaveSOAP?: (soap: { subjective: string; objective: string; assessment: string; plan: string }, isResearchNote: boolean) => void;
 }
 
 export function SOAPNoteWriter({
@@ -45,6 +47,8 @@ export function SOAPNoteWriter({
   sessionTranscript = '',
   patientConsentToken,
   attentionWeights = { visual: 0.33, acoustic: 0.34, linguistic: 0.33 },
+  isResearchMode = false,
+  ethicsRef = 'IEC/NIMHANS/2026/042',
   onSaveSOAP
 }: SOAPNoteWriterProps) {
   const signalEngine = new ClinicalSignalEngine();
@@ -63,10 +67,20 @@ export function SOAPNoteWriter({
     baselineDraft.subjective += `\n\nLive Consultation Dialogue Record:\n${sessionTranscript.trim()}`;
   }
 
+  // In non-research mode, strip raw biomarker metrics from the default objective note
+  if (!isResearchMode) {
+    baselineDraft.objective = baselineDraft.objective
+      .replace(/Acoustic Jitter \(RAP\):.*$/gm, '')
+      .replace(/Corrugator \(AU4\) Frown Intensity:.*$/gm, '')
+      .replace(/Incongruence Metric D\(t\):.*$/gm, '')
+      .trim();
+  }
+
   const [soap, setSoap] = useState(baselineDraft);
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [saveAsResearch, setSaveAsResearch] = useState(isResearchMode);
   const [scribeBadge, setScribeBadge] = useState<string | null>(null);
   const [consentError, setConsentError] = useState<string | null>(null);
 
@@ -98,14 +112,14 @@ export function SOAPNoteWriter({
           primaryDiagnosis,
           sessionTranscript,
           subjectiveScore,
-          emaStress,
-          rFrown,
-          rBlink,
-          speechJitter,
-          isFlatAffect,
-          discrepancyAlert,
-          discrepancyD,
-          attentionWeights,
+          emaStress: isResearchMode ? emaStress : undefined,
+          rFrown: isResearchMode ? rFrown : undefined,
+          rBlink: isResearchMode ? rBlink : undefined,
+          speechJitter: isResearchMode ? speechJitter : undefined,
+          isFlatAffect: isResearchMode ? isFlatAffect : undefined,
+          discrepancyAlert: isResearchMode ? discrepancyAlert : false,
+          discrepancyD: isResearchMode ? discrepancyD : undefined,
+          attentionWeights: isResearchMode ? attentionWeights : undefined,
           patientConsentToken,
         })
       });
@@ -114,19 +128,21 @@ export function SOAPNoteWriter({
         const data = await res.json();
         if (data.soap) {
           setSoap(data.soap);
-          setScribeBadge(data.generatedBy || "AI Ambient Scribe");
+          setScribeBadge(data.generatedBy || "AI Clinical Scribe");
           logComplianceAudit({
             userId: 'dr_jenkins_84920',
             userRole: 'clinician',
             action: 'GENERATE_AI_SCRIBE',
             patientId,
-            details: `Auto-generated multimodal SOAP note via ${data.generatedBy}`
+            details: `Auto-generated clinical SOAP note via ${data.generatedBy} (${data.isResearchNote ? 'Research Note' : 'Standard Clinical'})`
           });
         }
       } else {
         const errData = await res.json().catch(() => ({}));
         if (res.status === 403 && errData.code === 'PATIENT_CONSENT_REQUIRED') {
-          setConsentError("Patient biometric & telemetry consent has not been granted. Documentation cannot be auto-generated.");
+          setConsentError("Patient biometric & telemetry consent has not been granted under DPDP Act 2023. Documentation cannot be auto-generated.");
+        } else if (res.status === 403 && errData.code === 'FEATURE_DISABLED_AI_NOTE_DRAFTING') {
+          setConsentError("AI Note Drafting is disabled for this organization under CDSCO/ICMR guidelines. Requires recorded Institutional Ethics Committee (IEC) approval.");
         }
       }
     } catch (err) {
@@ -137,11 +153,12 @@ export function SOAPNoteWriter({
   };
 
   const handleCopy = () => {
-    const formattedText = `CLINICAL SOAP NOTE - PRAXIS AI TELE-PSYCHIATRY
+    const formattedText = `CLINICAL SOAP NOTE - PRAXIS AI TELE-PSYCHIATRY (INDIA)
 PATIENT: ${patientName} (${patientId})
 PRIMARY DIAGNOSIS: ${primaryDiagnosis}
 TIMESTAMP: ${new Date().toISOString()}
-
+RECORD TYPE: ${saveAsResearch ? 'RESEARCH NOTE (NOT FOR CLINICAL DECISION)' : 'OFFICIAL MEDICAL RECORD'}
+${saveAsResearch ? `ETHICS REF: ${ethicsRef}\n` : ''}
 SUBJECTIVE (S):
 ${soap.subjective}
 
@@ -155,7 +172,7 @@ PLAN (P):
 ${soap.plan}
 
 ---
-Generated with Praxis AI Multimodal Clinical Decision Support.`;
+Generated with Praxis AI Clinical Documentation. Designed to support Registered Medical Practitioners. REQUIRES DOCTOR REVIEW.`;
 
     navigator.clipboard.writeText(formattedText);
     setCopied(true);
@@ -167,16 +184,27 @@ Generated with Praxis AI Multimodal Clinical Decision Support.`;
     if (patientId) {
       clearSoapDraft(patientId);
     }
+
+    // Cleanse objective note if saving as official record without research protocol
+    let finalSoap = { ...soap };
+    if (!saveAsResearch) {
+      finalSoap.objective = finalSoap.objective
+        .replace(/Acoustic Jitter.*$/gm, '')
+        .replace(/Corrugator.*$/gm, '')
+        .replace(/Incongruence Metric D\(t\):.*$/gm, '')
+        .trim();
+    }
+
     logComplianceAudit({
       userId: 'dr_jenkins_84920',
       userRole: 'clinician',
       action: 'SAVE_SOAP_NOTE',
       patientId,
-      details: `Digitally signed and archived psychiatric SOAP note for ${patientName}`
+      details: `Digitally signed and archived psychiatric SOAP note for ${patientName} (Type: ${saveAsResearch ? 'Research Note' : 'Official Medical Record'})`
     });
 
     if (onSaveSOAP) {
-      onSaveSOAP(soap);
+      onSaveSOAP(finalSoap, saveAsResearch);
     }
 
     setTimeout(() => setIsSaved(false), 3000);
@@ -188,17 +216,33 @@ Generated with Praxis AI Multimodal Clinical Decision Support.`;
         <div>
           <div className="flex items-center space-x-2">
             <CardTitle className="text-base font-bold text-slate-900 flex items-center">
-              <FileText className="w-5 h-5 mr-2 text-teal-600" /> Ambient AI Clinical Scribe
+              <FileText className="w-5 h-5 mr-2 text-teal-600" /> Clinical Psychiatric Scribe
             </CardTitle>
             {scribeBadge && (
               <span className="px-2 py-0.5 bg-teal-50 text-teal-700 text-[10px] font-mono font-bold rounded-md border border-teal-200">
                 {scribeBadge}
               </span>
             )}
+            {isResearchMode && (
+              <span className="px-2 py-0.5 bg-amber-50 text-amber-800 text-[10px] font-mono font-bold rounded-md border border-amber-300 flex items-center gap-1">
+                <Microscope className="w-3 h-3 text-amber-600" /> Research Mode Active
+              </span>
+            )}
           </div>
           <CardDescription className="text-xs text-slate-500 mt-0.5">
-            Auto-synthesizes structured SOAP notes using live WebRTC transcript & multimodal biometric tensors.
+            Structured clinical documentation assisting registered psychiatrists under Indian Telemedicine Guidelines.
           </CardDescription>
+
+          {isResearchMode ? (
+            <div className="mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-900 text-xs font-mono">
+              <strong>Research use only. Not for diagnosis or treatment decisions.</strong> (IEC Protocol: {ethicsRef})
+            </div>
+          ) : (
+            <div className="mt-2 p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 text-xs">
+              Standard Clinical Mode: Raw biometric telemetry numbers are strictly isolated from the legal medical record.
+            </div>
+          )}
+
           {consentError && (
             <div className="mt-2.5 p-2 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
@@ -208,6 +252,25 @@ Generated with Praxis AI Multimodal Clinical Decision Support.`;
         </div>
 
         <div className="flex items-center flex-wrap gap-2">
+          {isResearchMode && (
+            <div className="flex items-center gap-1.5 mr-2 bg-slate-100 p-1 rounded-lg text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setSaveAsResearch(false)}
+                className={`px-2 py-1 rounded text-[11px] transition-all ${!saveAsResearch ? 'bg-white shadow text-slate-900 font-bold' : 'text-slate-500'}`}
+              >
+                Official Record
+              </button>
+              <button
+                type="button"
+                onClick={() => setSaveAsResearch(true)}
+                className={`px-2 py-1 rounded text-[11px] transition-all ${saveAsResearch ? 'bg-amber-100 text-amber-900 font-bold' : 'text-slate-500'}`}
+              >
+                Research Note
+              </button>
+            </div>
+          )}
+
           <Button 
             size="sm" 
             onClick={handleGenerateAISoap}
@@ -232,17 +295,17 @@ Generated with Praxis AI Multimodal Clinical Decision Support.`;
             className="bg-[#1E1B4B] hover:bg-[#2E2A72] text-white text-xs font-semibold shadow-sm"
           >
             {isSaved ? <Check className="w-3.5 h-3.5 mr-1 text-emerald-300" /> : <Save className="w-3.5 h-3.5 mr-1" />}
-            {isSaved ? 'Signed & Saved' : 'Sign & Save'}
+            {isSaved ? 'Signed & Saved' : saveAsResearch ? 'Save as Research Note' : 'Sign & Save Official Record'}
           </Button>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4 text-xs pt-4 flex-1">
-        {discrepancyAlert && (
+        {isResearchMode && discrepancyAlert && (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 flex items-center justify-between text-xs">
             <span className="flex items-center font-medium">
               <AlertTriangle className="w-4 h-4 mr-2 text-amber-600 shrink-0" />
-              Symptom Masking Alert Flagged: Involuntary acoustic and facial biomarkers disagree with verbal self-report.
+              Investigational Discrepancy Flag: Involuntary acoustic/facial metrics disagree with verbal self-report.
             </span>
             <span className="font-mono text-[11px] font-bold bg-amber-100 px-2 py-0.5 rounded text-amber-900">
               D(t) = {discrepancyD.toFixed(1)}
@@ -267,13 +330,15 @@ Generated with Praxis AI Multimodal Clinical Decision Support.`;
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label className="text-[11px] font-bold text-teal-800 uppercase tracking-wider">Objective (O)</label>
-            <span className="text-[10px] text-slate-400 font-mono">Real-time edge biomarkers, acoustics, kinematics</span>
+            <span className="text-[10px] text-slate-400 font-mono">
+              {saveAsResearch ? 'Experimental bio-acoustic & kinematic tensors (RUO)' : 'Mental status examination & clinical observation'}
+            </span>
           </div>
           <textarea
             rows={4}
             value={soap.objective}
             onChange={(e) => setSoap({ ...soap, objective: e.target.value })}
-            placeholder="Quantify vocal acoustic jitter, speech velocity, facial contraction, and stress indices..."
+            placeholder="Document clinical observations, affect, speech rate, psychomotor activity..."
             className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-teal-600 font-mono text-xs shadow-inner resize-y"
           />
         </div>
@@ -281,13 +346,13 @@ Generated with Praxis AI Multimodal Clinical Decision Support.`;
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label className="text-[11px] font-bold text-teal-800 uppercase tracking-wider">Assessment (A)</label>
-            <span className="text-[10px] text-slate-400 font-mono">Clinical formulation, ICD-11, masking risk</span>
+            <span className="text-[10px] text-slate-400 font-mono">Clinical formulation, ICD-11 diagnosis</span>
           </div>
           <textarea
             rows={3}
             value={soap.assessment}
             onChange={(e) => setSoap({ ...soap, assessment: e.target.value })}
-            placeholder="Synthesize diagnostic impression, symptom incongruence, and psychiatric risk..."
+            placeholder="Synthesize diagnostic impression and psychiatric formulation..."
             className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-teal-600 font-mono text-xs shadow-inner resize-y"
           />
         </div>
@@ -295,7 +360,7 @@ Generated with Praxis AI Multimodal Clinical Decision Support.`;
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label className="text-[11px] font-bold text-teal-800 uppercase tracking-wider">Plan (P)</label>
-            <span className="text-[10px] text-slate-400 font-mono">Interventions, pharmacotherapy, safety protocol</span>
+            <span className="text-[10px] text-slate-400 font-mono">Interventions, pharmacotherapy, follow-up schedule</span>
           </div>
           <textarea
             rows={3}
@@ -309,10 +374,10 @@ Generated with Praxis AI Multimodal Clinical Decision Support.`;
         <div className="pt-2 flex items-center justify-between text-[11px] text-slate-500 font-mono border-t border-slate-100">
           <span className="flex items-center">
             <ShieldCheck className="w-3.5 h-3.5 mr-1.5 text-teal-600" />
-            Immutable HIPAA audit log entry created on digital signature
+            Immutable DPDP Act 2023 / NMC 2002 audit log entry created on digital signature
           </span>
           <span className="text-slate-400">
-            NPI: 849201938 • Dr. Sarah Jenkins
+            NMC Reg: 84920/2018 (MMC) • Dr. Sarah Jenkins (RMP)
           </span>
         </div>
       </CardContent>

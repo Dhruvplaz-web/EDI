@@ -184,7 +184,7 @@ export function SidebarLayout({
           <div className="flex items-center space-x-4">
             <span className="bg-[#F4F4F5] dark:bg-[#18181B] text-[#52525B] dark:text-[#A1A1AA] border border-[#E4E4E7] dark:border-[#27272A] font-medium px-3 py-1 rounded-full text-xs flex items-center">
               <span className="w-1.5 h-1.5 rounded-full bg-[#0066FF] mr-2" />
-              HIPAA Protected
+              DPDP Protected (India)
             </span>
 
             {/* Language Selector */}
@@ -241,7 +241,7 @@ export function SidebarLayout({
               </div>
               <div className="flex justify-between">
                 <span>Security Level</span>
-                <span className="font-semibold text-[#0066FF]">HIPAA Verified</span>
+                <span className="font-semibold text-[#0066FF]">DPDP 2023 Verified</span>
               </div>
             </div>
 

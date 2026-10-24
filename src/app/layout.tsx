@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 import { headers } from "next/headers";
 
 export const metadata: Metadata = {
-  title: "Praxis AI - Clinical Decision-Support & Tele-Psychiatry Platform",
-  description: "HIPAA/GDPR-compliant multimodal tele-psychiatry platform featuring WebRTC transport and edge computer vision.",
+  title: "Praxis AI - Clinical Decision-Support & Tele-Psychiatry Platform (India)",
+  description: "Multimodal tele-psychiatry platform designed to support DPDP Act 2023 and Telemedicine Practice Guidelines 2020 (NMC/MoHFW).",
 };
 
 export const dynamic = 'force-dynamic';

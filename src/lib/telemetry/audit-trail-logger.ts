@@ -1,6 +1,6 @@
 /**
  * Praxis AI - Immutable Compliance Audit Trail Logger
- * Logs HIPAA/GDPR compliance events (record view, note export, prescription issue).
+ * Logs DPDP Act 2023 / Telemedicine Practice Guidelines compliance events (record view, note export, prescription issue).
  */
 
 import { db } from '@/lib/firebase/client';

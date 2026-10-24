@@ -2,7 +2,7 @@
  * Praxis AI - Google Cloud Vertex AI Enterprise Authentication
  * 
  * Provides OAuth2 service-account Bearer tokens for Google Cloud Vertex AI REST endpoints.
- * Complies with HIPAA BAA requirements (service-account authentication only; no consumer API keys).
+ * Complies with DPDP Act 2023 Processor requirements under Google Cloud India DPA (service-account authentication only; no consumer API keys).
  */
 
 import crypto from 'crypto';

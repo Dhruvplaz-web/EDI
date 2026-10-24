@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateDailyAuditExport } from '@/lib/telemetry/server-audit-logger';
 
 /**
- * Praxis AI - Daily Compliance Audit Export Cron Job (HIPAA 45 CFR § 164.312(b))
+ * Praxis AI - Daily Compliance Audit Export Cron Job (DPDP Act 2023 / CERT-In Directions)
  * 
  * Scheduled to run daily (e.g. 03:00 UTC) via Cloud Scheduler or Vercel Cron.
  * Authenticates via Authorization: Bearer ${CRON_SECRET}.

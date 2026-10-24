@@ -7,7 +7,7 @@ import {
   SOAP_DRAFT_PREFIX
 } from '@/lib/clinical/soap-draft-storage';
 
-describe('SOAP Draft Storage Security (HIPAA PHI-at-Rest Protection)', () => {
+describe('SOAP Draft Storage Security (DPDP Health Data-at-Rest Protection)', () => {
   const patientId = 'patient_pt_99214_alice';
   const sampleSoap = {
     subjective: 'Patient reports mild social anxiety and fatigue.',

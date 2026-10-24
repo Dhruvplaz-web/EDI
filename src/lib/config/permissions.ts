@@ -47,7 +47,7 @@ export const PERMISSIONS = [
   'view_anonymized_analytics',        // Read-only access to hospital operational dashboards
 
   // System & IT
-  'view_system_audit_logs',           // View HIPAA/DPDP access trails (who viewed whose record)
+  'view_system_audit_logs',           // View DPDP access trails (who viewed whose record)
   'manage_rbac_assignments',          // Add/Remove staff roles
   'perform_system_override',          // IT level "Break Glass" protocols
   'trigger_emergency_override',       // Clinical level "Break Glass" for patient records

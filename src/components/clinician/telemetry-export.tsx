@@ -74,7 +74,7 @@ export function TelemetryExport({
         crossModalDiscrepancyAlertsTriggered: sessionData.discrepancyAlertsCount
       },
       compliance: {
-        hipaaCompliant: true,
+        dpdpAligned: true,
         zeroCloudGpuStorage: true,
         rawVideoSaved: false,
         rawAudioSaved: false,
@@ -131,10 +131,10 @@ export function TelemetryExport({
         <body>
           <div class="header">
             <div>
-              <div class="logo">PRAXIS AI • CLINICAL TELE-PSYCHIATRY</div>
-              <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Multimodal XAI Telemetry & Malpractice Defense Record</div>
+              <div class="logo">PRAXIS AI • CLINICAL TELE-PSYCHIATRY (INDIA)</div>
+              <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Multimodal Telemetry & Telemedicine Practice Guidelines Record</div>
             </div>
-            <div class="badge">HIPAA AUDIT VERIFIED</div>
+            <div class="badge">DPDP 2023 / NMC 2020 AUDIT VERIFIED</div>
           </div>
 
           <div class="meta-grid">
@@ -145,8 +145,8 @@ export function TelemetryExport({
             </div>
             <div>
               <div><strong>Attending Clinician:</strong> Dr. Sarah Jenkins, MD</div>
-              <div><strong>Clinician NPI:</strong> 849201938</div>
-              <div><strong>Edge Engine:</strong> YIN DSP + MediaPipe + Transformers.js</div>
+              <div><strong>NMC / SMC Reg No:</strong> 84920/2018 (Maharashtra Medical Council)</div>
+              <div><strong>Prescription Drug Guard:</strong> Schedule X & NDPS Strict Exclusion Active</div>
             </div>
           </div>
 
@@ -183,13 +183,13 @@ export function TelemetryExport({
 
           <div class="section-title">3. Compliance & Edge Processing Attestation</div>
           <p style="font-size: 11px; color: #475569;">
-            This report represents mathematical abstractions extracted via real-time client-side edge computing (zero cloud video storage). Raw audio and video streams were not retained or transmitted to external third-party GPU clusters, maintaining strict compliance with HIPAA (45 CFR § 164.312) and Indian Telemedicine Practice Guidelines.
+            This report represents mathematical abstractions extracted via real-time client-side edge computing (zero cloud video storage). Raw audio and video streams were not retained or transmitted to external third-party GPU clusters, designed to support DPDP Act 2023 security safeguards and Telemedicine Practice Guidelines 2020 (NMC/MoHFW).
           </p>
 
           <div class="signature-block">
             <div>
               <div style="margin-bottom: 24px;">Dr. Sarah Jenkins, MD</div>
-              <div style="font-size: 11px; color: #64748b;">Attending Adult Psychiatrist</div>
+              <div style="font-size: 11px; color: #64748b;">Attending Psychiatrist (NMC Reg: 84920/2018)</div>
             </div>
             <div>
               <div style="margin-bottom: 24px;">Date: ${nowStr.split(',')[0]}</div>
@@ -210,7 +210,7 @@ export function TelemetryExport({
       userRole: 'clinician',
       action: 'EXPORT_TELEMETRY',
       patientId,
-      details: 'Exported formal printable PDF telemetry report for malpractice defense'
+      details: 'Exported formal printable PDF telemetry report for telemedicine practice record'
     });
 
     setExportedFormat('PDF');
@@ -221,10 +221,10 @@ export function TelemetryExport({
     <Card className="bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl shadow-slate-200/50 text-slate-900 font-sans">
       <CardHeader className="pb-3 border-b border-slate-100">
         <CardTitle className="text-base font-bold text-slate-900 flex items-center">
-          <Download className="w-5 h-5 mr-2 text-teal-600" /> Session Telemetry & Malpractice Defense Export
+          <Download className="w-5 h-5 mr-2 text-teal-600" /> Session Telemetry & Clinical Export (India)
         </CardTitle>
         <CardDescription className="text-xs text-slate-500">
-          Export HIPAA-compliant telemetry audit records containing cross-attention tensor weights and discrepancy logs.
+          Export DPDP-aligned telemetry audit records containing cross-attention tensor weights and discrepancy logs under Research Protocol.
         </CardDescription>
       </CardHeader>
 

@@ -4,7 +4,7 @@
  * Enforces strict, revocable, timestamped patient consent persisted server-side
  * BEFORE any biometric sensor or transcription API (Web Speech, MediaPipe, AudioWorklet, Gemini) fires.
  * 
- * Complies with HIPAA 45 CFR § 164.508 and State Biometric Privacy Acts (IL BIPA, TX CUBI).
+ * Designed to support Digital Personal Data Protection Act 2023 (§ 5 & § 6) and Telemedicine Practice Guidelines 2020.
  */
 
 import { createSignedSessionToken, verifySignedSessionToken } from '@/lib/auth/session';

@@ -6,8 +6,9 @@ import {
   recordPatientConsent,
   revokePatientConsent,
   clearConsentStoreForTesting,
-  verifyStoredConsent
+  verifyStoredConsent,
 } from '@/lib/consent/consent-store';
+import { setMockOrgFeatureFlags, clearMockOrgFeatureFlags } from '@/lib/config/feature-flags';
 
 let currentMockCookies: Record<string, string> = {};
 
@@ -25,6 +26,13 @@ describe('C.2, C.4, C.5: Server-Side Stored Consent, BAA Verification & PHI Acce
   beforeEach(() => {
     currentMockCookies = {};
     clearConsentStoreForTesting();
+    clearMockOrgFeatureFlags();
+    setMockOrgFeatureFlags('org_mayo_clinic', {
+      aiNoteDrafting: true,
+      researchMode: true,
+      biomarkerScores: true,
+      discrepancyAlerts: true,
+    });
     vi.restoreAllMocks();
   });
 

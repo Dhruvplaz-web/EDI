@@ -50,19 +50,24 @@ export async function submitIntake(formData: Record<string, unknown>) {
     const sessionUid = verifiedSession.uid;
     const orgId = verifiedSession.orgId || DEFAULT_DEMO_ORG_ID;
 
+    // Check organization feature flags for India compliance
+    const { getOrgFeatureFlags } = await import('@/lib/config/feature-flags');
+    const orgFlags = await getOrgFeatureFlags(orgId);
+
     const intakeDoc = {
       patientId: sessionUid,
       orgId,
       symptoms: validData.symptoms,
       baselineSeverityScore: Number(validData.severity || validData.baselineSeverityScore || 5.0),
       medicationChanges: validData.medicationChanges === 'yes' ? 'yes' : 'no',
-      au4Frown: Number(validData.au4Frown || 0),
-      au15Depressor: Number(validData.au15Depressor || 0),
-      speechJitter: Number(validData.speechJitter || 0),
-      pitchVariance: Number(validData.pitchVariance || 0),
+      au4Frown: orgFlags.biomarkerScores ? Number(validData.au4Frown || 0) : 0,
+      au15Depressor: orgFlags.biomarkerScores ? Number(validData.au15Depressor || 0) : 0,
+      speechJitter: orgFlags.biomarkerScores ? Number(validData.speechJitter || 0) : 0,
+      pitchVariance: orgFlags.biomarkerScores ? Number(validData.pitchVariance || 0) : 0,
       phq9Score: Number(validData.phq9Score || 0),
       gad7Score: Number(validData.gad7Score || 0),
-      discrepancyD: Number(validData.discrepancyD || 0),
+      discrepancyD: orgFlags.discrepancyAlerts ? Number(validData.discrepancyD || 0) : 0,
+      isResearchCohort: Boolean(orgFlags.researchMode),
       status: 'waiting',
       isDemo: orgId === DEFAULT_DEMO_ORG_ID,
       submittedAt: admin.firestore.FieldValue.serverTimestamp(),

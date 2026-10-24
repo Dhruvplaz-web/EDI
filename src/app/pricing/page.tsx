@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { SAAS_PLANS, PlanTier, calculateSubscriptionCost } from '@/lib/stripe/plans';
+import { SAAS_PLANS, PlanTier } from '@/lib/stripe/plans';
 import { Check, Shield, Zap, Sparkles, Building2, ArrowRight } from 'lucide-react';
 
 export default function PricingPage() {
@@ -22,7 +22,7 @@ export default function PricingPage() {
             <span className="w-8 h-8 rounded-lg bg-neutral-900 text-white flex items-center justify-center text-sm font-black shadow-sm">
               PX
             </span>
-            <span>Praxis<span className="text-purple-600">.AI</span></span>
+            <span>Praxis<span className="text-purple-600">.AI</span> <span className="text-xs font-mono font-medium px-2 py-0.5 bg-neutral-100 rounded text-neutral-600 border border-neutral-300">India</span></span>
           </Link>
           <div className="flex items-center gap-4">
             <Link
@@ -45,14 +45,19 @@ export default function PricingPage() {
       <section className="py-20 px-6 max-w-5xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-xs font-semibold text-purple-700 mb-6">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Transparent Per-Clinician B2B SaaS Subscriptions</span>
+          <span>B2B Telepsychiatry SaaS for Indian Psychiatric Clinics & Hospitals</span>
         </div>
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-neutral-900 mb-6">
-          Predictable Clinical Telemetry Pricing.
+          Simple Per-Clinician Subscription Pricing.
         </h1>
         <p className="text-lg text-neutral-600 max-w-2xl mx-auto mb-10">
-          Equip your psychiatric practice with edge bio-acoustic jitter extraction, kinematic facial Action Unit monitoring, and ambient SOAP documentation.
+          Equip your psychiatric clinic with WebRTC video rooms, e-prescriptions, structured intake, and optional research-mode AI note formulation.
         </p>
+
+        {/* Currency & Tax Notice Banner */}
+        <div className="max-w-xl mx-auto mb-8 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs text-center font-mono">
+          <span>Domestic INR pricing is currently <strong>to be decided</strong>. GST (18%) applicable under SAC 998313. Razorpay UPI Autopay / e-NACH subscriptions in pilot testing.</span>
+        </div>
 
         {/* Billing Cycle Toggle */}
         <div className="inline-flex items-center p-1 rounded-xl bg-neutral-200/80 border border-neutral-300/80">
@@ -90,7 +95,6 @@ export default function PricingPage() {
           {(['starter', 'professional', 'enterprise'] as PlanTier[]).map((tierKey) => {
             const plan = SAAS_PLANS[tierKey];
             const isPro = tierKey === 'professional';
-            const price = billingCycle === 'annual' ? plan.pricePerSeatAnnual : plan.pricePerSeatMonthly;
 
             return (
               <div
@@ -119,11 +123,15 @@ export default function PricingPage() {
 
                   <div className="mb-6 pb-6 border-b border-neutral-100">
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-extrabold tracking-tight text-neutral-900">${price}</span>
-                      <span className="text-sm font-medium text-neutral-500">/ clinician / mo</span>
+                      <span className="text-2xl font-extrabold tracking-tight text-neutral-900">₹ [To be decided]</span>
+                      <span className="text-xs font-medium text-neutral-500">/ clinician / mo</span>
                     </div>
-                    <p className="text-xs text-neutral-400 mt-1">
-                      {billingCycle === 'annual' ? 'Billed annually' : 'Billed monthly'} &bull; {plan.trialDays}-day free trial
+                    <div className="mt-1 flex items-center justify-between text-xs text-neutral-500">
+                      <span className="text-amber-800 font-medium">+ 18% GST (SAC {plan.sacCode})</span>
+                      <span className="text-neutral-400">({plan.trialDays}-day free trial)</span>
+                    </div>
+                    <p className="text-[11px] text-neutral-400 mt-1">
+                      {billingCycle === 'annual' ? 'Billed annually with 20% discount' : 'Billed monthly'} &bull; International: ${billingCycle === 'annual' ? plan.pricePerSeatAnnual : plan.pricePerSeatMonthly}/seat/mo
                     </p>
                   </div>
 
@@ -131,7 +139,7 @@ export default function PricingPage() {
                   <div className="mb-6">
                     <div className="flex justify-between items-center text-xs font-semibold text-neutral-700 mb-2">
                       <span>Seats Needed</span>
-                      <span className="tabular-nums font-bold text-neutral-900">{selectedSeats[tierKey]} clinician(s)</span>
+                      <span className="tabular-nums font-bold text-neutral-900">{selectedSeats[tierKey]} clinician seat(s)</span>
                     </div>
                     <input
                       type="range"
@@ -147,8 +155,8 @@ export default function PricingPage() {
                       className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
                     />
                     <div className="flex justify-between text-[11px] text-neutral-400 mt-1">
-                      <span>1</span>
-                      <span>Max {plan.maxSeats === 9999 ? 'Unlimited' : plan.maxSeats}</span>
+                      <span>1 seat</span>
+                      <span>Max {plan.maxSeats === 9999 ? 'Unlimited' : `${plan.maxSeats} seats`}</span>
                     </div>
                   </div>
 
@@ -164,7 +172,7 @@ export default function PricingPage() {
                             &times;
                           </span>
                         )}
-                        <span className={feat.included ? 'text-neutral-700' : 'text-neutral-400'}>{feat.name}</span>
+                        <span className={feat.included ? 'text-neutral-700 font-medium' : 'text-neutral-400'}>{feat.name}</span>
                       </div>
                     ))}
                   </div>
@@ -179,11 +187,11 @@ export default function PricingPage() {
                         : 'bg-neutral-900 hover:bg-neutral-800 text-white'
                     }`}
                   >
-                    <span>Start {plan.trialDays}-Day Free Trial</span>
+                    <span>Start {plan.trialDays}-Day Clinic Trial</span>
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                   <p className="text-center text-[11px] text-neutral-400 mt-2">
-                    Est. total: ${(price * selectedSeats[tierKey]).toLocaleString()}/mo
+                    Billed via Razorpay Subscriptions (UPI Autopay, cards, e-NACH) or Stripe International
                   </p>
                 </div>
               </div>
@@ -194,15 +202,19 @@ export default function PricingPage() {
 
       {/* Compliance & Security Guarantee */}
       <footer className="border-t border-neutral-200 bg-white py-12 px-6">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-neutral-500">
-          <div className="flex items-center gap-4">
-            <span className="font-semibold text-neutral-800">Praxis AI Healthcare Platform</span>
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-neutral-500">
+          <div className="flex items-center flex-wrap gap-3">
+            <span className="font-semibold text-neutral-800">Praxis AI / EDI Platform (India)</span>
             <span>&bull;</span>
-            <span>HIPAA 45 CFR § 164 Compliant</span>
+            <span>Designed to support DPDP Act 2023</span>
             <span>&bull;</span>
-            <span>FDA 21 U.S.C. § 360j(o)(1)(E) CDS Grounding</span>
+            <span>Telemedicine Practice Guidelines 2020 (NMC/MoHFW)</span>
+            <span>&bull;</span>
+            <span>CDSCO SaMD / ICMR AI Ethical Framework (RUO Gating)</span>
+            <span>&bull;</span>
+            <span className="text-amber-700 font-semibold">REQUIRES LAWYER & CA REVIEW</span>
           </div>
-          <p>&copy; {new Date().getFullYear()} Praxis AI Inc. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Praxis AI. All rights reserved.</p>
         </div>
       </footer>
     </div>

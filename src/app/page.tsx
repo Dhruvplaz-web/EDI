@@ -46,7 +46,7 @@ export default function HomePage() {
           <span className="w-1.5 h-1.5 rounded-full bg-[#0066FF] animate-pulse" />
           <span>Clinical Decision Support System</span>
           <span className="text-[#BFDBFE]">•</span>
-          <span>FDA Section 520(o) Notice Active</span>
+          <span>Telemedicine Guidelines 2020 (NMC) • DPDP Act 2023</span>
         </div>
 
         {/* Hero Typography */}
@@ -142,9 +142,9 @@ export default function HomePage() {
 
       {/* Luxury Light Footer */}
       <footer className="border-t border-[#E4E4E7] bg-white py-6 text-center text-xs text-[#71717A] space-y-2">
-        <p className="font-medium text-[#27272A]">© 2026 Praxis AI • Clinical Tele-Psychiatry Platform</p>
+        <p className="font-medium text-[#27272A]">© 2026 Praxis AI • Clinical Tele-Psychiatry Platform (India)</p>
         <p className="max-w-3xl mx-auto text-[11px] text-[#A1A1AA] leading-relaxed px-4">
-          Statutory Notice: Praxis operates strictly as a non-device Clinical Decision Support (CDS) platform compliant with FDA Section 520(o). All acoustic measurements, facial metrics, and note drafts require independent review and approval by a licensed clinician.
+          Statutory Notice: Praxis AI is designed to support registered medical practitioners under the Telemedicine Practice Guidelines 2020 (NMC/MoHFW), DPDP Act 2023, and ICMR AI Ethical Framework. Investigational features are restricted to Research Mode under Institutional Ethics Committee approval. Not for autonomous diagnosis or prescribing. (REQUIRES DOCTOR REVIEW)
         </p>
       </footer>
     </div>

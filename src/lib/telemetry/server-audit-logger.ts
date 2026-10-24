@@ -1,5 +1,5 @@
 /**
- * Praxis AI - Server-Side Append-Only Immutable Audit Trail Logger (HIPAA 45 CFR § 164.312(b))
+ * Praxis AI - Server-Side Append-Only Immutable Audit Trail Logger (DPDP Act 2023 § 8 & CERT-In Directions 2022)
  * 
  * Enforced by Firestore security rules (client creates denied, updates/deletes denied)
  * and written exclusively by server APIs via Firebase Admin SDK.
@@ -200,7 +200,7 @@ export function verifyAuditChainIntegrity(logs: ServerAuditLogEntry[]): boolean 
 }
 
 /**
- * Generates an encrypted/signed daily audit export bundle for compliance archiving (HIPAA WORM storage).
+ * Generates an encrypted/signed daily audit export bundle for compliance archiving (DPDP & CERT-In immutable storage).
  */
 export async function generateDailyAuditExport(orgId?: string): Promise<AuditExportBundle> {
   let logsToExport = [...inMemoryAuditLogs];

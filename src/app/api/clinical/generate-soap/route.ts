@@ -5,12 +5,13 @@ import { cookies } from "next/headers";
 import { verifySignedSessionToken } from "@/lib/auth/session";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { verifyStoredConsent } from "@/lib/consent/consent-store";
-import { isVertexAiBaaActive } from "@/lib/compliance/baa-registry";
+import { isVertexAiDpaActive } from "@/lib/compliance/baa-registry";
 import { logServerAudit } from "@/lib/telemetry/server-audit-logger";
 import { assertSameOrg } from "@/lib/auth/tenant";
 import { adminDb } from "@/lib/firebase/server";
 import { patientService } from "@/lib/firebase/patient-service";
 import { getVertexAiAccessToken } from "@/lib/vertex/auth";
+import { getOrgFeatureFlags } from "@/lib/config/feature-flags";
 
 const generateSoapSchema = z.object({
   patientId: z.string().min(1),
@@ -64,7 +65,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Payload validation
+    // 3. Indian Regulatory Feature Flag Gating (CDSCO SaMD / ICMR Guidelines)
+    const orgFlags = await getOrgFeatureFlags(verifiedSession.orgId);
+    if (!orgFlags.aiNoteDrafting) {
+      return NextResponse.json(
+        {
+          error: "AI Note Drafting is disabled for this organization. In accordance with Indian CDSCO/ICMR guidelines, automated clinical AI features require recorded Institutional Ethics Committee (IEC) approval in Research Mode.",
+          code: "FEATURE_DISABLED_AI_NOTE_DRAFTING",
+        },
+        { status: 403 }
+      );
+    }
+
+    // 4. Payload validation
     const jsonBody = await req.json();
     const parseResult = generateSoapSchema.safeParse(jsonBody);
     if (!parseResult.success) {
@@ -76,8 +89,22 @@ export async function POST(req: NextRequest) {
 
     const body = parseResult.data;
 
-    // 4. Tenant isolation & Platform Super-Admin Break-Glass Policy (Part D)
-    // Load patient record FIRST and verify orgId BEFORE reading consent or processing PHI
+    // Filter biomarker and discrepancy inputs if feature flags are disabled
+    if (!orgFlags.biomarkerScores) {
+      body.speechJitter = undefined;
+      body.rFrown = undefined;
+      body.rBlink = undefined;
+      body.emaStress = undefined;
+      body.isFlatAffect = undefined;
+      body.attentionWeights = undefined;
+    }
+
+    if (!orgFlags.discrepancyAlerts) {
+      body.discrepancyD = undefined;
+      body.discrepancyAlert = false;
+    }
+
+    // 5. Tenant isolation & Platform Super-Admin Break-Glass Policy
     let patientRecord: { orgId?: string } | null = null;
     if (adminDb && process.env.NODE_ENV !== 'test') {
       try {
@@ -91,11 +118,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (!patientRecord) {
-      // Fallback to patient service for demo/offline cohorts
       patientRecord = await patientService.getPatientById(body.patientId, verifiedSession.orgId);
     }
 
-    // In unit test environment, fallback mock tenant for test patient fixtures
     if (!patientRecord && process.env.NODE_ENV === 'test') {
       if (body.patientId.includes('CROSS_TENANT') || body.patientId.includes('ORG_B')) {
         patientRecord = { orgId: 'org_other_tenant' };
@@ -115,7 +140,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: msg }, { status: 403 });
     }
 
-    // 5. Regulatory Patient Consent Gate (REG-01 / C.2)
+    // 6. DPDP Patient Consent Gate (DPDP Act 2023 § 6)
     const consentCheck = await verifyStoredConsent(body.patientId, verifiedSession.orgId, 'ai_documentation');
     if (!consentCheck.isValid) {
       return NextResponse.json(
@@ -127,24 +152,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 6. Enterprise Cloud LLM Gate: Google Cloud Vertex AI under BAA (Part H.1)
-    // Strictly uses OAuth2 Service Account Bearer tokens; consumer API keys are completely removed.
-    const baaStatus = await isVertexAiBaaActive(verifiedSession.orgId);
+    // 7. Disclaimer formulation per research mode
+    const isResearchMode = orgFlags.researchMode;
+    const statutoryDisclaimer = isResearchMode
+      ? "Research use only. Not for diagnosis or treatment decisions. (Indian CDSCO/ICMR RUO Guidelines — REQUIRES DOCTOR REVIEW)"
+      : "Clinical Decision Support Output: Designed to assist registered medical practitioners under the Telemedicine Practice Guidelines 2020 and ICMR Ethical Guidelines for AI in Healthcare. Not for autonomous diagnostic or treatment use. REQUIRES DOCTOR REVIEW.";
+
+    // 8. Enterprise Cloud LLM Gate: Google Cloud Vertex AI under DPDP India DPA
+    const dpaStatus = await isVertexAiDpaActive(verifiedSession.orgId);
     const isVertexEnabled = process.env.VERTEX_AI_ENABLED === 'true' || process.env.GEMINI_ENABLED === 'true';
 
-    if (baaStatus.active && isVertexEnabled) {
+    if (dpaStatus.active && isVertexEnabled) {
       try {
         const accessToken = await getVertexAiAccessToken();
         if (accessToken) {
-          const region = process.env.VERTEX_AI_REGION || 'us-central1';
+          const region = dpaStatus.region || process.env.DATA_REGION || process.env.VERTEX_AI_REGION || 'asia-south1';
           const projectId = process.env.VERTEX_AI_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || 'praxis-ai-health';
-          const model = baaStatus.model || 'gemini-1.5-flash';
+          const model = dpaStatus.model || 'gemini-1.5-flash';
 
           const pseudonym = `PATIENT_HASH_${body.patientId.slice(-4)}`;
           const sanitizedTranscript = (body.sessionTranscript || "Patient engaged in structured tele-consultation interview.")
             .replace(new RegExp(body.patientName, "gi"), "[PATIENT_NAME]");
 
-          const prompt = `You are Praxis AI, an enterprise-grade clinical psychiatric scribe assisting a licensed psychiatrist during a tele-mental health consultation.
+          const prompt = `You are Praxis AI, a clinical psychiatric scribe assisting a registered psychiatrist during a tele-mental health consultation in India.
 Analyze the following de-identified multimodal session evidence and output a formal psychiatric SOAP note in JSON format.
 
 PATIENT CONTEXT:
@@ -152,13 +182,13 @@ PATIENT CONTEXT:
 - Primary Diagnosis / Intake: ${body.primaryDiagnosis || "General Consultation"}
 - Self-Reported Subjective Distress Score: ${body.subjectiveScore ?? 5.0} / 10
 
-OBJECTIVE EDGE-BIOMARKER EVIDENCE:
+${orgFlags.biomarkerScores ? `OBJECTIVE EDGE-BIOMARKER EVIDENCE (RESEARCH USE ONLY):
 - Objective Stress EMA Index: ${(body.emaStress ?? 5.0).toFixed(1)} / 10
 - Facial Action Unit 4 (Brow Lowerer) Contraction Rate: ${((body.rFrown ?? 0.2) * 100).toFixed(1)}%
 - Vocal Acoustic Jitter (RAP %): ${(body.speechJitter ?? 0.8).toFixed(2)}%
-- Vocal Flat Affect: ${body.isFlatAffect ? "DETECTED" : "None"}
-- Symptom Incongruence Metric D(t): ${(body.discrepancyD ?? 0.0).toFixed(2)}
-- Cross-Modal Masking Alert Active: ${body.discrepancyAlert ? "YES" : "No"}
+- Vocal Flat Affect: ${body.isFlatAffect ? "DETECTED" : "None"}` : 'OBJECTIVE CLINICAL OBSERVATION:\n- Objective biomarkers omitted (Standard Clinical Mode)'}
+${orgFlags.discrepancyAlerts ? `- Symptom Incongruence Metric D(t): ${(body.discrepancyD ?? 0.0).toFixed(2)}
+- Cross-Modal Masking Alert Active: ${body.discrepancyAlert ? "YES" : "No"}` : ''}
 
 DE-IDENTIFIED TRANSCRIPT:
 "${sanitizedTranscript}"
@@ -166,9 +196,9 @@ DE-IDENTIFIED TRANSCRIPT:
 INSTRUCTIONS:
 Output strict JSON with keys:
 - subjective: Chief complaint and self-reported distress.
-- objective: Quantification of speech cadence, vocal acoustics, and facial kinematics.
+- objective: Quantification of speech cadence, vocal acoustics, and clinical observation.
 - assessment: Diagnostic synthesis evaluating clinical severity and ICD-11 categorization.
-- plan: Step-by-step evidence-based clinical management plan.
+- plan: Step-by-step evidence-based clinical management plan adhering to Indian clinical guidelines.
 - icd11SuggestedCodes: Array of 1-3 appropriate ICD-11 diagnosis codes (e.g. ["6A70.0"]).
 - riskLevel: One of "STABLE", "MODERATE", "ELEVATED", or "CRITICAL".`;
 
@@ -205,9 +235,11 @@ Output strict JSON with keys:
                 action: 'GENERATE_SOAP',
                 patientId: body.patientId,
                 details: {
-                  provider: 'Google Cloud Vertex AI (BAA Dedicated)',
+                  provider: 'Google Cloud Vertex AI (DPDP India DPA Gateway)',
+                  region,
                   model,
                   riskLevel: parsed.riskLevel || (body.discrepancyAlert ? "ELEVATED" : "MODERATE"),
+                  isResearchMode,
                 },
               });
 
@@ -227,20 +259,21 @@ Output strict JSON with keys:
                 },
                 icd11SuggestedCodes: parsed.icd11SuggestedCodes || ["6A70"],
                 riskLevel: parsed.riskLevel || (body.discrepancyAlert ? "ELEVATED" : "MODERATE"),
-                generatedBy: "Praxis Cloud Scribe (Google Cloud Vertex AI BAA Gateway)",
-                engineSource: "VERTEX_AI_BAA_CLOUD",
-                disclaimer: "FDA Section 520(o) Clinical Decision Support Output: For licensed clinician review only. Not for autonomous diagnostic use."
+                generatedBy: "Praxis Cloud Scribe (Google Cloud Vertex AI India Gateway)",
+                engineSource: "VERTEX_AI_INDIA_CLOUD",
+                isResearchNote: isResearchMode,
+                disclaimer: statutoryDisclaimer,
               });
             }
           }
         }
       } catch (vertexErr: unknown) {
         const errorMsg = vertexErr instanceof Error ? vertexErr.message : 'Unknown Vertex AI error';
-        console.warn("[SOAP Generation] Vertex AI cloud call fallback to local DSP synthesizer:", errorMsg);
+        console.warn("[SOAP Generation] Vertex AI cloud call fallback to local synthesizer:", errorMsg);
       }
     }
 
-    // 7. Deterministic Local Edge DSP Synthesizer (Zero-Cloud / Air-Gapped Fallback)
+    // 9. Deterministic Local Edge Synthesizer (Zero-Cloud Fallback)
     const localSOAP = synthesizeSOAPNote({
       patientId: body.patientId,
       patientName: body.patientName,
@@ -272,7 +305,8 @@ Output strict JSON with keys:
         patientName: body.patientName,
         primaryDiagnosis: body.primaryDiagnosis,
         riskLevel: body.discrepancyAlert ? "ELEVATED" : "MODERATE",
-        engineSource: "LOCAL_DETERMINISTIC_EDGE"
+        engineSource: "LOCAL_DETERMINISTIC_EDGE",
+        isResearchMode,
       },
     });
 
@@ -282,9 +316,10 @@ Output strict JSON with keys:
       soapNote: localSOAP.soap,
       icd11SuggestedCodes: localSOAP.icd11SuggestedCodes || ["6A70.0", "6B00"],
       riskLevel: localSOAP.riskLevel || (body.discrepancyAlert ? "ELEVATED" : "MODERATE"),
-      generatedBy: "Praxis Deterministic Clinical Synthesizer (Local Edge DSP)",
+      generatedBy: "Praxis Clinical Synthesizer (Local Edge DSP)",
       engineSource: "LOCAL_DETERMINISTIC_EDGE",
-      disclaimer: "FDA Section 520(o) Clinical Decision Support Output: For licensed clinician review only. Not for autonomous diagnostic use."
+      isResearchNote: isResearchMode,
+      disclaimer: statutoryDisclaimer,
     });
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';

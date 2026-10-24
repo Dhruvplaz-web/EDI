@@ -1,7 +1,7 @@
 /**
  * SOAP Draft Storage Utility
  * 
- * HIPAA Security Rule & PHI Protection:
+ * DPDP Act 2023 & Indian Healthcare Data Protection:
  * Storing unencrypted clinical notes / PHI in browser localStorage violates
  * data-at-rest encryption and persistent retention requirements on shared workstations.
  * 

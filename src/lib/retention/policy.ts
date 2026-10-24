@@ -1,14 +1,15 @@
 /**
- * Praxis AI - Automated Clinical Telemetry Retention & HIPAA Expiration Engine (Part G.3)
+ * Praxis AI - Automated Clinical Telemetry Retention & DPDP / Telemedicine Expiration Engine
  * 
  * =========================================================================================
- * CRITICAL REGULATORY NOTICE & COMPLIANCE POLICY:
+ * CRITICAL REGULATORY NOTICE & COMPLIANCE POLICY (INDIA):
  * Clinical records (SOAP notes, diagnostic evaluations, intake assessments, patient charts)
  * MUST NEVER BE AUTO-DELETED based on SaaS commercial pricing tiers.
  * 
- * Medical record retention is governed strictly by state medical board statutes (typically 7-10 years)
- * and HIPAA rules (45 CFR § 164.316(b)(2)(i), requiring a 6-year retention baseline for compliance actions).
- * Clinical records are subject to an immutable, counsel-configured retention schedule.
+ * Medical record retention in India is governed strictly by the Indian Medical Council
+ * (Professional Conduct, Etiquette and Ethics) Regulations 2002 (Regulation 1.3, minimum 3 years
+ * from commencement of treatment) and Telemedicine Practice Guidelines 2020.
+ * Clinical records are subject to an immutable legal hold. Tag: REQUIRES LAWYER REVIEW.
  * 
  * This automated engine purges ONLY transient telemetry and derived biomarker data:
  * - High-frequency facial landmark meshes

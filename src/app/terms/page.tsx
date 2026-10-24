@@ -31,10 +31,10 @@ export default function TermsOfServicePage() {
         <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 space-y-2 text-amber-900 dark:text-amber-200">
           <div className="flex items-center gap-2 font-bold text-sm">
             <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <span>STATUTORY CLINICAL DECISION SUPPORT (CDS) DISCLAIMER</span>
+            <span>STATUTORY CLINICAL DECISION SUPPORT DISCLAIMER (INDIA)</span>
           </div>
           <p className="text-xs leading-relaxed">
-            Praxis AI is an assistive Clinical Decision Support (CDS) software platform meeting FDA Section 520(o) Non-Device criteria. It does NOT provide autonomous medical diagnosis, emergency medical dispatch, or therapeutic prescriptions. All clinical diagnoses and interventions remain the sole responsibility of the licensed attending clinician.
+            Praxis AI is an assistive Clinical Decision Support (CDS) software platform designed to support Registered Medical Practitioners (RMPs) under the Telemedicine Practice Guidelines 2020 (NMC/MoHFW) and ICMR Ethical Guidelines for AI in Healthcare. It does NOT provide autonomous medical diagnosis, emergency medical dispatch, or therapeutic prescriptions. All clinical diagnoses, treatment plans, and e-prescriptions remain the sole responsibility of the attending registered clinician. Tag: REQUIRES LAWYER REVIEW.
           </p>
         </div>
 
@@ -42,7 +42,7 @@ export default function TermsOfServicePage() {
           <section className="space-y-2">
             <h3 className="text-base font-bold text-foreground">1. Clinician Licensure & Authorization</h3>
             <p>
-              Access to the Clinical Consultation Suite and Triage Queue is strictly restricted to licensed healthcare professionals authorized to practice medicine or psychotherapy in their respective jurisdiction.
+              Access to the Clinical Consultation Suite and Triage Queue is strictly restricted to Registered Medical Practitioners (RMPs) registered with State Medical Councils (SMC) or the National Medical Commission (NMC) in India, and licensed Clinical Psychologists registered with the Rehabilitation Council of India (RCI).
             </p>
           </section>
 
@@ -56,7 +56,7 @@ export default function TermsOfServicePage() {
           <section className="space-y-2">
             <h3 className="text-base font-bold text-foreground">3. Emergency Situations</h3>
             <p>
-              In the event of an imminent acute psychiatric crisis, suicidal ideation with intent, or medical emergency, providers and patients must immediately contact localized emergency medical services (911 in the US/Canada or 988 Suicide & Crisis Lifeline) rather than relying on automated software notifications.
+              In the event of an imminent acute psychiatric crisis, suicidal ideation with intent, or medical emergency, providers and patients must immediately contact localized emergency medical services in India: National Emergency (112), National Tele-Mental Health Helpline Tele-MANAS (14416 / 1800-891-4416), or KIRAN Mental Health Helpline (1800-599-0019) rather than relying on automated software notifications.
             </p>
           </section>
         </div>

@@ -124,7 +124,7 @@ describe('Part G.2 & G.3: Self-Serve Organization Signup, Trial Abuse, Staff Inv
   });
 
   describe('Part G.3: Telemetry Retention Engine (Telemetry-Only Scoping)', () => {
-    it('calculates correct HIPAA retention cutoffs per plan tier', () => {
+    it('calculates correct DPDP / NMC retention cutoffs per plan tier', () => {
       const now = Date.now();
       const starterCutoff = calculateRetentionCutoff('starter', now);
       const proCutoff = calculateRetentionCutoff('professional', now);

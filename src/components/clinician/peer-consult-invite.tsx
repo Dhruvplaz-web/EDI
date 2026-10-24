@@ -47,7 +47,7 @@ export function PeerConsultInvite({ callId }: PeerConsultInviteProps) {
         </div>
 
         <div className="text-[10px] text-slate-500 flex items-center">
-          <Shield className="w-3.5 h-3.5 mr-1.5 text-teal-600" /> End-to-end encrypted WebRTC peer stream with HIPAA audit trail.
+          <Shield className="w-3.5 h-3.5 mr-1.5 text-teal-600" /> End-to-end encrypted WebRTC peer stream with DPDP Act 2023 audit trail.
         </div>
       </CardContent>
     </Card>

@@ -194,7 +194,7 @@ export default function LoginPage() {
 
         {/* Security & Compliance Badges Footer */}
         <div className="flex items-center justify-center space-x-5 text-[11px] font-mono text-[#71717A]">
-          <span className="flex items-center"><ShieldCheck className="w-3.5 h-3.5 mr-1 text-[#0066FF]" strokeWidth={1.75} /> HIPAA Protected</span>
+          <span className="flex items-center"><ShieldCheck className="w-3.5 h-3.5 mr-1 text-[#0066FF]" strokeWidth={1.75} /> DPDP Protected (India)</span>
           <span className="flex items-center"><Lock className="w-3.5 h-3.5 mr-1 text-[#0066FF]" strokeWidth={1.75} /> 256-bit Encrypted</span>
           <span className="flex items-center"><UserCheck className="w-3.5 h-3.5 mr-1 text-[#0066FF]" strokeWidth={1.75} /> Client Signal DSP</span>
         </div>

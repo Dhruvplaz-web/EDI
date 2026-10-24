@@ -7,8 +7,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![WebRTC](https://img.shields.io/badge/WebRTC-Opus_48kHz-333333?style=for-the-badge&logo=webrtc)](https://webrtc.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-Vision_Wasm-0097A7?style=for-the-badge&logo=google)](https://developers.google.com/mediapipe)
-[![Compliance](https://img.shields.io/badge/FDA_Section_520(o)-Non--Device_CDS_Criteria-emerald?style=for-the-badge)](docs/COMPLIANCE.md)
-[![HIPAA](https://img.shields.io/badge/HIPAA-Workflow_Aligned-0052CC?style=for-the-badge)](docs/COMPLIANCE.md)
+[![DPDP Act 2023](https://img.shields.io/badge/DPDP_Act_2023-Designed_to_Support-0052CC?style=for-the-badge)](docs/INDIA_COMPLIANCE_MATRIX.md)
+[![Telemedicine Guidelines 2020](https://img.shields.io/badge/NMC_Telemedicine_2020-Designed_to_Support-emerald?style=for-the-badge)](docs/INDIA_COMPLIANCE_MATRIX.md)
+[![ICMR AI Framework](https://img.shields.io/badge/ICMR_AI_2023-RUO_Governance-purple?style=for-the-badge)](docs/INDIA_COMPLIANCE_MATRIX.md)
 
 <p align="center">
   <strong>Tele-psychiatry platform featuring real-time client-side acoustic prosody DSP, 3D facial Action Unit kinematics, and multi-head cross-attention fusion designed to assist licensed clinicians in detecting objective markers of affective distress and symptom masking.</strong>
@@ -28,8 +29,8 @@
 </div>
 
 > [!IMPORTANT]
-> **STATUTORY CLINICAL DECISION SUPPORT (CDS) DISCLAIMER**  
-> Praxis AI is a Clinical Decision Support tool designed under **21 U.S.C. § 360j(o)(1)(E)** (FDA Section 520(o) Non-Device CDS criteria). It is intended solely to assist licensed psychiatric and behavioral healthcare professionals by displaying objective kinematic and acoustic telemetry. It **does not provide automated diagnosis, autonomous treatment decisions, or emergency dispatch**. All diagnostic conclusions and prescribing decisions remain the sole responsibility of the attending clinician.
+> **STATUTORY CLINICAL DECISION SUPPORT & TELEMEDICINE DISCLAIMER (INDIA)**  
+> Praxis AI is a clinical workflow and telemedicine assistive platform designed to support Registered Medical Practitioners (RMPs) under the **NMC Telemedicine Practice Guidelines 2020**, **Digital Personal Data Protection (DPDP) Act 2023**, and **Mental Healthcare Act 2017**. Voice/facial biomarker analytics and AI note drafting are assistive research features governed under ICMR Ethical Guidelines (2023) and CDSCO Medical Device Software guidance (`CDSCO/MD/GD/MDSW/01/2026`). They are **disabled by default**, restricted to Research Mode with recorded Institutional Ethics Committee (IEC) approval, and labeled: *"Research use only. Not for diagnosis or treatment decisions."* Praxis AI does not provide automated diagnosis, autonomous prescribing, or emergency response dispatch. Diagnostic and treatment decisions remain the sole statutory responsibility of the registered physician. (REQUIRES LAWYER REVIEW • REQUIRES DOCTOR REVIEW)
 
 ---
 
@@ -128,11 +129,12 @@ Open `http://localhost:3000` to access the application.
 
 ---
 
-## ⚖️ Regulatory & Statutory Compliance
+## ⚖️ Indian Regulatory & Compliance Architecture
 
-- **HIPAA Security Rule (45 CFR Part 160 & Part 164)**: Real-time telemetry processing is executed locally on client hardware. When cloud LLM transcription is active, direct identifiers are de-identified under Safe Harbor guidelines (45 CFR § 164.514(b)), and execution requires a signed Business Associate Agreement (BAA).
-- **FDA Section 520(o) Non-Device CDS**: Praxis AI presents transparent raw inputs, formulas, and reasoning to enable the clinician to independently review the basis for all recommendations.
-- For complete audit controls, risk assessments, and vendor BAA requirements, see [docs/COMPLIANCE.md](docs/COMPLIANCE.md).
+- **DPDP Act 2023 & DPDP Rules 2025**: The clinic acts as the Data Fiduciary and Praxis AI operates strictly as a Data Processor under a Data Processing Agreement (DPA). Personal health data is maintained with itemized, revocable consent, strict purpose limitation, and data principal rights (access, correction, erasure, grievance, nominee).
+- **NMC Telemedicine Practice Guidelines 2020**: Enforces RMP / State Medical Council verification before initiating consults, patient consent capture, RMP identification display, and structured e-prescriptions adhering to List O/A/B restrictions (prohibiting Schedule X and NDPS drugs). Minimum 3-year medical record retention.
+- **CDSCO SaMD & ICMR AI Framework**: Biometric and acoustic telemetry analytics are gated behind Research Mode requiring documented Ethics Committee approval. Not cleared or certified as a medical device. (REQUIRES LAWYER REVIEW)
+- For complete audit controls, risk matrices, and legal drafts, see [docs/INDIA_COMPLIANCE_MATRIX.md](docs/INDIA_COMPLIANCE_MATRIX.md) and [docs/COMPLIANCE.md](docs/COMPLIANCE.md).
 
 ---
 

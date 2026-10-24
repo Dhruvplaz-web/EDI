@@ -38,6 +38,7 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
   const [showEmsModal, setShowEmsModal] = useState(false)
   const [activeTab, setActiveTab] = useState('consult')
   const [viewMode, setViewMode] = useState<'ambient' | 'diagnostic'>('ambient')
+  const [isResearchMode, setIsResearchMode] = useState<boolean>(false)
 
   // 1-Click Examiner Defense Simulation Controller State
   const [isSimulating, setIsSimulating] = useState(false)
@@ -210,11 +211,42 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
     <SidebarLayout
       role="clinician"
       userName="Dr. Sarah Jenkins"
-      userSubtitle="NPI-84920 • Adult Psychiatry"
+      userSubtitle="NMC Reg: 84920/2018 (Maharashtra Medical Council) • MD Psychiatry"
       navItems={clinicianNavItems}
       activeTab={activeTab}
       onTabChange={handleTabChange}
     >
+      {/* Research Mode RUO Statutory Banner */}
+      {isResearchMode ? (
+        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-900 px-4 py-2.5 rounded-xl text-xs flex items-center justify-between font-mono">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 bg-amber-500 text-white font-bold rounded text-[10px]">RESEARCH MODE ACTIVE</span>
+            <span>Research use only. Not for diagnosis or treatment decisions. (IEC Protocol: IEC/NIMHANS/2026/042)</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsResearchMode(false)}
+            className="text-[10px] text-amber-700 underline font-semibold hover:text-amber-900"
+          >
+            Switch to Standard Clinical Mode
+          </button>
+        </div>
+      ) : (
+        <div className="bg-slate-50 border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-xs flex items-center justify-between">
+          <span className="flex items-center gap-1.5 font-medium">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Standard Clinical Mode (Telemedicine Practice Guidelines 2020)
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsResearchMode(true)}
+            className="text-[11px] text-teal-700 hover:text-teal-800 font-semibold underline"
+          >
+            Enable Research Mode (IEC Required)
+          </button>
+        </div>
+      )}
+
       {/* Patient Cohort Context Header */}
       <div className="bg-white/95 backdrop-blur-sm p-4 rounded-xl border border-[#E4E4E7] shadow-[0_1px_3px_rgba(0,0,0,0.02),0_4px_16px_rgba(0,0,0,0.02)] flex flex-col md:flex-row justify-between items-start md:items-center gap-3 text-left">
         <div>
@@ -496,15 +528,15 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
             />
           </div>
 
-          {/* Statutory FDA Section 520(o) CDS Compliance Disclosure */}
+          {/* Indian Clinical Decision Support & Telepsychiatry Statutory Notice */}
           <div className="rounded-xl border border-[#E4E4E7] bg-[#FAFAFA] p-4 text-xs text-[#52525B] flex items-start gap-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
             <ShieldAlert className="w-4 h-4 text-[#71717A] shrink-0 mt-0.5" strokeWidth={1.75} />
             <div className="space-y-1 text-left">
               <p className="font-semibold text-[#09090B]">
-                Clinical Decision Support Notice
+                Telemedicine Practice Guidelines 2020 & ICMR AI Disclosure
               </p>
               <p className="text-[11px] text-[#71717A] leading-relaxed">
-                This software provides objective vocal acoustic measurements and facial Action Unit kinematic data to support clinical assessment. In accordance with the 21st Century Cures Act and FDA Section 520(o), this tool is not an autonomous diagnostic instrument and does not replace the judgment of a licensed healthcare provider. Providers must independently verify patient history and all clinical observations before establishing care plans.
+                This platform is designed to assist registered medical practitioners under the Telemedicine Practice Guidelines 2020 (NMC/MoHFW), Telepsychiatry Operational Guidelines 2020, and ICMR Ethical Guidelines for AI in Healthcare. It does not provide autonomous diagnostic or treatment decisions. All clinical findings, diagnoses, and e-prescriptions require independent evaluation and approval by the attending Registered Medical Practitioner. (REQUIRES DOCTOR REVIEW)
               </p>
             </div>
           </div>
@@ -551,6 +583,7 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
             primaryDiagnosis={patient.primaryDiagnosis}
             attentionWeights={fusionResult?.attentionWeights}
             patientConsentToken={hasConsent ? consentToken : undefined}
+            isResearchMode={isResearchMode}
           />
         </div>
       )}
@@ -565,35 +598,65 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
       {/* Tab: Biomarker Trends & Analytics */}
       {activeTab === 'analytics' && (
         <div className="max-w-4xl mx-auto space-y-6">
-          <BiomarkerAnalytics />
+          {isResearchMode ? (
+            <BiomarkerAnalytics />
+          ) : (
+            <div className="p-6 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-2">
+              <TrendingUp className="w-8 h-8 text-slate-400 mx-auto" />
+              <h3 className="font-bold text-slate-800 text-sm">Biomarker Analytics Restricted to Research Mode</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Under CDSCO SaMD (MDSW/01/2026) and ICMR ethical guidelines, objective vocal acoustic and facial kinematic scoring is classified as investigational software and is disabled for standard clinical care.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
       {/* Tab: Kinematic Weight Calibration */}
       {activeTab === 'weights' && (
         <div className="max-w-3xl mx-auto space-y-6">
-          <StressWeightAdjuster onWeightsChange={setStressWeights} />
+          {isResearchMode ? (
+            <StressWeightAdjuster onWeightsChange={setStressWeights} />
+          ) : (
+            <div className="p-6 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-2">
+              <Sliders className="w-8 h-8 text-slate-400 mx-auto" />
+              <h3 className="font-bold text-slate-800 text-sm">Weight Calibration Restricted to Research Mode</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Kinematic attention tensor weights cannot be altered during standard clinical teleconsultations.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
       {/* Tab: Telemetry Export */}
       {activeTab === 'export' && (
         <div className="max-w-3xl mx-auto space-y-6">
-          <TelemetryExport
-            patientId={patientId}
-            patientName={patient.fullName}
-            sessionData={{
-              peakStress: Math.max(fusionResult?.fusedSeverityScore ?? rawStressScore, 8.2),
-              avgStress: fusionResult?.fusedSeverityScore ?? emaStressScore,
-              frownRate: au4BrowDown,
-              blinkRate: 0.14,
-              discrepancyAlertsCount: (fusionResult?.isMaskingAlertActive || discrepancyAlert) ? 1 : 0,
-              attentionWeights: fusionResult?.attentionWeights,
-              discrepancyD: fusionResult?.discrepancyD,
-              speechJitter: jitterPercent,
-              speechWpm: speechVelocityWpm
-            }}
-          />
+          {isResearchMode ? (
+            <TelemetryExport
+              patientId={patientId}
+              patientName={patient.fullName}
+              sessionData={{
+                peakStress: Math.max(fusionResult?.fusedSeverityScore ?? rawStressScore, 8.2),
+                avgStress: fusionResult?.fusedSeverityScore ?? emaStressScore,
+                frownRate: au4BrowDown,
+                blinkRate: 0.14,
+                discrepancyAlertsCount: (fusionResult?.isMaskingAlertActive || discrepancyAlert) ? 1 : 0,
+                attentionWeights: fusionResult?.attentionWeights,
+                discrepancyD: fusionResult?.discrepancyD,
+                speechJitter: jitterPercent,
+                speechWpm: speechVelocityWpm
+              }}
+            />
+          ) : (
+            <div className="p-6 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-2">
+              <Download className="w-8 h-8 text-slate-400 mx-auto" />
+              <h3 className="font-bold text-slate-800 text-sm">Telemetry Export Restricted to Research Mode</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Raw biometric telemetry export is only available for studies with Institutional Ethics Committee (IEC) clearance.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -608,13 +671,13 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
       {showEmsModal && (
         <EmergencyEscalationModal
           patientName={patient.fullName}
-          patientPhone={patient.emergencyContact?.phone || "+1 (555) 000-0000"}
+          patientPhone={patient.emergencyContact?.phone || "+91 98765 43210"}
           emergencyContact={{
-            name: patient.emergencyContact?.name || "Emergency Contact",
+            name: patient.emergencyContact?.name || "Emergency Contact / Nominated Rep",
             relation: patient.emergencyContact?.relation || "Family/Guardian",
-            phone: patient.emergencyContact?.phone || "+1 (555) 000-0000"
+            phone: patient.emergencyContact?.phone || "+91 98765 43210"
           }}
-          locationAddress={patient.emergencyContact?.address || "Unknown Address"}
+          locationAddress={patient.emergencyContact?.address || "Mumbai, Maharashtra, India"}
           onClose={() => setShowEmsModal(false)}
         />
       )}

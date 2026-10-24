@@ -97,7 +97,7 @@ export function useLiveTranscription(
 
     // Consent Gate & Engine Privacy Gate (C.3):
     // webkitSpeechRecognition is DISABLED BY DEFAULT to prevent unconsented voice transmission
-    // to Google Speech backend servers without an enterprise BAA.
+    // to Google Speech backend servers without an enterprise India DPA.
     if (!hasConsent || engineMode !== 'browser_cloud_opt_in') {
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch {}
@@ -181,7 +181,7 @@ export function useLiveTranscription(
     }
 
     if (engineMode === 'disabled') {
-      console.warn("[useLiveTranscription] Speech transcription is DISABLED by default under HIPAA privacy rules. No network speech egress initiated.");
+      console.warn("[useLiveTranscription] Speech transcription is DISABLED by default under DPDP Act 2023 & Indian Data Residency safeguards. No network speech egress initiated.");
       return;
     }
 
