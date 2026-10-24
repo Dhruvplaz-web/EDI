@@ -14,14 +14,13 @@ import { POST as checkoutHandler } from '@/app/api/stripe/checkout/route';
 import { POST as generateSoapHandler } from '@/app/api/clinical/generate-soap/route';
 
 describe('Integration: API Route Handlers & Security Gates', () => {
-  it('GET /api/health returns 200 with healthy uptime and configured services', async () => {
+  it('GET /api/health returns 200 with minimal public status ok (Section E)', async () => {
     const res = await healthHandler();
     expect(res.status).toBe(200);
 
     const data = await res.json();
-    expect(data.status).toBe('healthy');
-    expect(data.services).toBeDefined();
-    expect(data.uptimeSeconds).toBeGreaterThanOrEqual(0);
+    expect(data.status).toBe('ok');
+    expect(data.services).toBeUndefined();
   });
 
   it('GET /api/dev-login returns 404 in production environment (SEC-01)', async () => {

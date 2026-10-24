@@ -10,6 +10,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+    exclude: process.env.EMULATOR_TESTS ? ['node_modules/**'] : ['tests/emulator/**', 'node_modules/**'],
   },
   resolve: {
     alias: {

@@ -68,16 +68,21 @@ export async function submitIntake(formData: Record<string, unknown>) {
       submittedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
+    if (!adminDb) {
+      throw new Error('Database service is currently uninitialized');
+    }
+
     const docRef = await adminDb.collection('intakes').add(intakeDoc);
 
-    // Immutable audit trail entry
-    await adminDb.collection('audit_logs').add({
-      action: 'clinical_intake_submitted',
-      actor: sessionUid,
+    // Immutable hash-chained audit trail entry
+    const { logServerAudit } = await import('@/lib/telemetry/server-audit-logger');
+    await logServerAudit({
+      action: 'INTAKE_SUBMITTED',
+      actorId: sessionUid,
+      actorRole: 'patient',
       orgId,
-      intakeId: docRef.id,
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      details: 'Patient submitted pre-consultation intake assessment.'
+      patientId: sessionUid,
+      details: { intakeId: docRef.id, symptomsLength: validData.symptoms.length },
     });
 
     return { success: true, intakeId: docRef.id };
@@ -87,3 +92,5 @@ export async function submitIntake(formData: Record<string, unknown>) {
     return { success: false, error: 'Failed to record intake assessment in database.' };
   }
 }
+
+export const submitIntakeAction = submitIntake;

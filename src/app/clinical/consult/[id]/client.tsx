@@ -55,6 +55,17 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
     return () => unsub()
   }, [patientId])
 
+  // Active Consultation Session Heartbeat (Part E.2) - Dispatches every 5 minutes to maintain session liveness
+  useEffect(() => {
+    const heartbeatInterval = setInterval(() => {
+      fetch('/api/session/heartbeat', { method: 'POST' }).catch((err) => {
+        console.warn('[Consultation Heartbeat] Ping warning:', err);
+      });
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(heartbeatInterval);
+  }, []);
+
   // Regulatory Consent Gate (REG-01): Telemetry & AI Documentation Consent
   const [hasConsent, setHasConsent] = useState<boolean>(true);
   const [consentToken, setConsentToken] = useState<string>('consent_token_authenticated_signed_2026');

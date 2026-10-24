@@ -49,3 +49,10 @@ next-env.d.ts
 *.zip
 *.tar.gz
 
+# test artifacts & debug logs
+playwright-report/
+test-results/
+firestore-debug.log
+*.local
+
+

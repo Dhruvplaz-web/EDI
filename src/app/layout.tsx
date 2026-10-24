@@ -15,16 +15,22 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+import { headers } from "next/headers";
+
 export const metadata: Metadata = {
   title: "Praxis AI - Clinical Decision-Support & Tele-Psychiatry Platform",
   description: "HIPAA/GDPR-compliant multimodal tele-psychiatry platform featuring WebRTC transport and edge computer vision.",
 };
 
-export default function RootLayout({
+export const dynamic = 'force-dynamic';
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get('x-nonce') || undefined;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background font-sans antialiased`}>
@@ -33,6 +39,7 @@ export default function RootLayout({
           defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
+          nonce={nonce}
         >
           <LanguageProvider>
             {children}

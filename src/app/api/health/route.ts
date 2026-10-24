@@ -1,6 +1,23 @@
 import { NextResponse } from 'next/server';
+import { getVerifiedSession } from '@/lib/auth/session';
 
-export async function GET() {
+export async function GET(_req?: Request) {
+  const session = await getVerifiedSession();
+
+  // Restrict detailed system diagnostic metrics to authenticated admins only (Section E)
+  if (!session || !['super_admin', 'it_support'].includes(session.role)) {
+    return NextResponse.json(
+      { status: 'ok' },
+      {
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+      }
+    );
+  }
+
+  // Full diagnostics for authenticated system administrators
   const startTime = Date.now();
   const uptime = process.uptime();
 

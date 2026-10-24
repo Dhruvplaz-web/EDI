@@ -1,0 +1,23 @@
+[
+ {
+  "RuleID": "private-key",
+  "Description": "Identified a Private Key, which may compromise cryptographic security and sensitive data encryption.",
+  "StartLine": 11,
+  "EndLine": 11,
+  "StartColumn": 82,
+  "EndColumn": 189,
+  "Match": "-----BEGIN PRIVATE KEY-----\\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDK\\n-----END PRIVATE KEY-----",
+  "Secret": "-----BEGIN PRIVATE KEY-----\\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDK\\n-----END PRIVATE KEY-----",
+  "File": "src/lib/firebase/server.ts",
+  "SymlinkFile": "",
+  "Commit": "d20124de546c10bddb4f17f8f506d43bfe7dc546",
+  "Link": "https://github.com/Dhruvplaz-web/EDI/blob/d20124de546c10bddb4f17f8f506d43bfe7dc546/src/lib/firebase/server.ts#L11",
+  "Entropy": 4.384912,
+  "Author": "Dhruv",
+  "Email": "dhruv@contracthawk.com",
+  "Date": "2026-10-23T18:07:15Z",
+  "Message": "chore(baseline): initialize git repository with protected gitignore",
+  "Tags": [],
+  "Fingerprint": "d20124de546c10bddb4f17f8f506d43bfe7dc546:src/lib/firebase/server.ts:private-key:11"
+ }
+]

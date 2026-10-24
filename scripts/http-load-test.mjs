@@ -1,19 +1,19 @@
 /**
- * Praxis AI - HTTP Load Testing Suite
- * Executes concurrent real HTTP benchmarks against Next.js endpoints:
+ * Praxis AI - Smoke Test on Dev Server
+ * Executes concurrent HTTP smoke scenarios against local Next.js dev server:
  * 1. GET /api/health
  * 2. GET /login
  * 3. GET /
  * 4. POST /api/clinical/generate-soap (Unauthorized & rate limit checks)
  * 
- * Computes real p50, p95, p99, throughput (req/s), and error rates.
+ * Computes observed p50, p95, p99, throughput (req/s), and error rates on dev server.
  */
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
 async function runScenario(name, endpoint, method = 'GET', concurrency = 20, totalRequests = 100, body = null, headers = {}) {
   console.log(`\n======================================================`);
-  console.log(`[LOAD TEST SCENARIO]: ${name}`);
+  console.log(`[SMOKE TEST ON DEV SERVER]: ${name}`);
   console.log(`Target: ${method} ${BASE_URL}${endpoint} | Concurrency: ${concurrency} | Total Requests: ${totalRequests}`);
   console.log(`======================================================`);
 
