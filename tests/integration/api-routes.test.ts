@@ -28,13 +28,13 @@ describe('Integration: API Route Handlers & Security Gates', () => {
     const originalEnv = process.env.NODE_ENV;
     try {
       // Emulate production environment
-      process.env.NODE_ENV = 'production';
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
       const req = new NextRequest('http://localhost:3000/api/dev-login?role=super_admin');
       const res = await devLoginHandler(req);
 
       expect(res.status).toBe(404);
     } finally {
-      process.env.NODE_ENV = originalEnv;
+      (process.env as Record<string, string | undefined>).NODE_ENV = originalEnv;
     }
   });
 
