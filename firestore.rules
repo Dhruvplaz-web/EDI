@@ -2,37 +2,48 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // Helper functions using cryptographically verified auth token custom claims
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function isRole(role) {
-      return isAuthenticated() && getUserData().role == role;
+    function userRole() {
+      return request.auth.token.role;
     }
 
     function userOrgId() {
-      return getUserData().orgId;
+      return request.auth.token.orgId;
     }
 
-    function isSuperAdmin() {
-      return isRole('super_admin');
+    function isRole(role) {
+      return isAuthenticated() && userRole() == role;
     }
 
     function isClinicalStaff() {
-      return isRole('clinician') || isRole('specialist') || isRole('clinical_director') || isRole('nurse');
+      return isAuthenticated() && 
+        (userRole() in ['clinician', 'clinical_director', 'specialist', 'nurse', 'medical_assistant', 'super_admin']);
     }
 
     function isPatient() {
-      return isRole('patient');
+      return isAuthenticated() && userRole() == 'patient';
     }
 
-    function isOperationsStaff() {
-      return isRole('operations') || isRole('billing_admin') || isRole('clinic_manager') || isRole('it_support');
+    function isOrgAdmin() {
+      return isAuthenticated() && 
+        (userRole() in ['clinic_manager', 'billing_admin', 'super_admin']);
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && userRole() == 'super_admin';
+    }
+
+    // Platform Super Admin Emergency Break-Glass:
+    // Requires non-expired override record created via server route
+    function hasEmergencyBreakGlass(patientId) {
+      return isAuthenticated() && 
+        isSuperAdmin() && 
+        exists(/databases/$(database)/documents/emergency_overrides/$(request.auth.uid + '_' + patientId)) &&
+        get(/databases/$(database)/documents/emergency_overrides/$(request.auth.uid + '_' + patientId)).data.expiresAt > request.time;
     }
 
     // Default deny all
@@ -40,103 +51,137 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Users collection: user can read their own profile; super admin can manage
+    // Users collection: user can read their own profile; org admin can view within org
+    // role and orgId are strictly IMMUTABLE for clients (assigned strictly by server Admin SDK)
     match /users/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
-      allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'orgId']));
+      allow read: if isAuthenticated() && (request.auth.uid == userId || (isOrgAdmin() && resource.data.orgId == userOrgId()));
+      allow create: if false; // User accounts created via server Admin SDK only
+      allow update: if isAuthenticated() && (
+        (request.auth.uid == userId || (isOrgAdmin() && resource.data.orgId == userOrgId())) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'orgId'])
+      );
+      allow delete: if false; // Deletion handled by server Admin SDK
     }
 
-    // Multi-tenant organizations
+    // Multi-tenant organizations: read by tenant members; managed by platform super_admin or Admin SDK
+    // Organization subscription fields (tier, status, seats, stripe ids) are SERVER-ONLY: clients CANNOT write them
     match /organizations/{orgId} {
       allow read: if isAuthenticated() && (userOrgId() == orgId || isSuperAdmin());
-      allow write: if isSuperAdmin();
+      allow update: if isOrgAdmin() && resource.data.orgId == userOrgId() &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'subscription', 'tier', 'status', 'seats', 'currentSeats', 'maxSeats', 'stripeCustomerId', 'stripeSubscriptionId'
+        ]);
+      allow create, delete: if false; // Server Admin SDK only
     }
 
-    // Patients collection: strictly isolated by tenant orgId & patient ID
+    // Patients collection (PHI):
+    // Super admins have NO default cross-tenant read permission (Principle of Least Privilege)
     match /patients/{patientId} {
       allow read: if isAuthenticated() && (
-        isSuperAdmin() ||
+        (isPatient() && patientId == request.auth.uid) ||
         (isClinicalStaff() && resource.data.orgId == userOrgId()) ||
-        (isPatient() && patientId == request.auth.uid)
+        (isOrgAdmin() && resource.data.orgId == userOrgId()) ||
+        hasEmergencyBreakGlass(patientId)
       );
-      allow write: if isAuthenticated() && (
-        isSuperAdmin() ||
-        (isClinicalStaff() && request.resource.data.orgId == userOrgId())
+      allow create: if isClinicalStaff() && request.resource.data.orgId == userOrgId();
+      allow update: if isAuthenticated() && (
+        (isPatient() && patientId == request.auth.uid && request.resource.data.orgId == resource.data.orgId) ||
+        (isClinicalStaff() && resource.data.orgId == userOrgId() && request.resource.data.orgId == resource.data.orgId)
       );
+      allow delete: if isOrgAdmin() && resource.data.orgId == userOrgId();
     }
 
-    // Clinical Intakes: IDOR-protected
+    // Clinical Intakes: IDOR-protected, org-scoped
     match /intakes/{intakeId} {
       allow read: if isAuthenticated() && (
-        isSuperAdmin() ||
+        (isPatient() && resource.data.patientId == request.auth.uid) ||
+        (isClinicalStaff() && resource.data.orgId == userOrgId())
+      );
+      allow create: if isAuthenticated() && (
+        (isPatient() && request.resource.data.patientId == request.auth.uid && request.resource.data.orgId == userOrgId()) ||
+        (isClinicalStaff() && request.resource.data.orgId == userOrgId())
+      );
+      allow update: if isClinicalStaff() && 
+                       resource.data.orgId == userOrgId() && 
+                       request.resource.data.orgId == resource.data.orgId;
+      allow delete: if isOrgAdmin() && resource.data.orgId == userOrgId();
+    }
+
+    // Sessions & Telemetry: strictly isolated by tenant orgId
+    match /sessions/{sessionId} {
+      allow read: if isAuthenticated() && (
         (isClinicalStaff() && resource.data.orgId == userOrgId()) ||
         (isPatient() && resource.data.patientId == request.auth.uid)
       );
+      allow create: if isClinicalStaff() && request.resource.data.orgId == userOrgId();
+      allow update: if isClinicalStaff() && 
+                       resource.data.orgId == userOrgId() && 
+                       request.resource.data.orgId == resource.data.orgId;
+      allow delete: if isOrgAdmin() && resource.data.orgId == userOrgId();
+    }
+
+    // WebRTC Real-Time Signaling (Audio/Video Consultation Rooms)
+    // On create: requires assigned clinician/patient from same tenant orgId
+    // On update: forbids changing clinicianId or patientId
+    match /calls/{callId} {
+      allow read: if isAuthenticated() && 
+        (resource.data.clinicianId == request.auth.uid || resource.data.patientId == request.auth.uid);
+
+      allow create: if isAuthenticated() && 
+        request.resource.data.orgId == userOrgId() &&
+        (request.resource.data.clinicianId == request.auth.uid || request.resource.data.patientId == request.auth.uid);
+
+      allow update: if isAuthenticated() && 
+        (resource.data.clinicianId == request.auth.uid || resource.data.patientId == request.auth.uid) &&
+        request.resource.data.clinicianId == resource.data.clinicianId &&
+        request.resource.data.patientId == resource.data.patientId &&
+        request.resource.data.orgId == resource.data.orgId;
+
+      allow delete: if isOrgAdmin() && resource.data.orgId == userOrgId();
+
+      match /offerCandidates/{candidateId} {
+        allow read, write: if isAuthenticated();
+      }
+
+      match /answerCandidates/{candidateId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    // Audit logs: Client create strictly DENIED (written only by server Admin SDK)
+    // Readable only by that specific organization's admin; immutable
+    match /audit_logs/{logId} {
+      allow create: if false; // Server Admin SDK only
+      allow read: if isOrgAdmin() && resource.data.orgId == userOrgId();
+      allow update, delete: if false;
+    }
+
+    // Emergency break-glass overrides: created ONLY via server route
+    // Clients cannot directly create overrides
+    match /emergency_overrides/{overrideId} {
+      allow create, update, delete: if false; // Server Admin SDK only
+      allow read: if isAuthenticated() && 
+        (resource.data.orgId == userOrgId() || isSuperAdmin());
+    }
+
+    // Patient Telemetry & AI Consent Records: Immutable compliance store
+    match /consent/{consentId} {
+      allow read: if isAuthenticated() && (
+        (isPatient() && resource.data.patientId == request.auth.uid) ||
+        ((isClinicalStaff() || isOrgAdmin()) && resource.data.orgId == userOrgId())
+      );
       allow create: if isAuthenticated() && (
-        isSuperAdmin() ||
         (isPatient() && request.resource.data.patientId == request.auth.uid && request.resource.data.orgId == userOrgId()) ||
         (isClinicalStaff() && request.resource.data.orgId == userOrgId())
       );
       allow update: if isAuthenticated() && (
-        isSuperAdmin() ||
-        (isClinicalStaff() && resource.data.orgId == userOrgId())
+        (isPatient() && resource.data.patientId == request.auth.uid && 
+         request.resource.data.patientId == resource.data.patientId && 
+         request.resource.data.orgId == resource.data.orgId) ||
+        (isClinicalStaff() && resource.data.orgId == userOrgId() && 
+         request.resource.data.orgId == resource.data.orgId)
       );
-      allow delete: if isSuperAdmin();
-    }
-
-    // Sessions & Telemetry: strictly isolated by orgId
-    match /sessions/{sessionId} {
-      allow read: if isAuthenticated() && (
-        isSuperAdmin() ||
-        (isClinicalStaff() && resource.data.orgId == userOrgId()) ||
-        (isPatient() && resource.data.patientId == request.auth.uid)
-      );
-      allow write: if isAuthenticated() && (
-        isSuperAdmin() ||
-        (isClinicalStaff() && request.resource.data.orgId == userOrgId())
-      );
-    }
-
-    // WebRTC Real-Time Signaling (Audio/Video Consultation Rooms)
-    // Strictly limited to authenticated call participants (Clinician & Patient)
-    match /calls/{callId} {
-      function isParticipant() {
-        return isSuperAdmin() ||
-          (resource != null && (resource.data.clinicianId == request.auth.uid || resource.data.patientId == request.auth.uid)) ||
-          (resource == null && (request.resource.data.clinicianId == request.auth.uid || request.resource.data.patientId == request.auth.uid));
-      }
-
-      allow read, write: if isAuthenticated() && isParticipant();
-
-      match /offerCandidates/{candidateId} {
-        allow read, write: if isAuthenticated() && (
-          isSuperAdmin() ||
-          get(/databases/$(database)/documents/calls/$(callId)).data.clinicianId == request.auth.uid ||
-          get(/databases/$(database)/documents/calls/$(callId)).data.patientId == request.auth.uid
-        );
-      }
-
-      match /answerCandidates/{candidateId} {
-        allow read, write: if isAuthenticated() && (
-          isSuperAdmin() ||
-          get(/databases/$(database)/documents/calls/$(callId)).data.clinicianId == request.auth.uid ||
-          get(/databases/$(database)/documents/calls/$(callId)).data.patientId == request.auth.uid
-        );
-      }
-    }
-
-    // Audit logs: Append-only by authenticated users, readable only by IT/Admins, immutable
-    match /audit_logs/{logId} {
-      allow create: if isAuthenticated();
-      allow read: if isSuperAdmin() || isRole('it_support');
-      allow update, delete: if false;
-    }
-
-    // Emergency break-glass overrides: Non-deletable compliance records
-    match /emergency_overrides/{overrideId} {
-      allow create: if isClinicalStaff();
-      allow read: if isClinicalStaff() || isOperationsStaff() || isSuperAdmin();
-      allow update, delete: if false;
+      allow delete: if false; // Compliance records must never be deleted; revocation is an update
     }
   }
 }
