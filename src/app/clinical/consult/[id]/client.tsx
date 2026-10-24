@@ -393,21 +393,27 @@ export function ClinicalConsultClient({ patientId, canWriteNotes }: { patientId:
             <div className="flex items-center space-x-2.5">
               <button 
                 onClick={() => setMicOn(!micOn)}
-                className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${micOn ? 'bg-white text-[#27272A] hover:bg-[#F4F4F5] border border-[#E4E4E7]' : 'bg-rose-600 text-white shadow-sm'}`}
+                aria-label={micOn ? "Mute microphone" : "Unmute microphone"}
+                className={`min-w-[44px] min-h-[44px] w-11 h-11 rounded-lg flex items-center justify-center transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${micOn ? 'bg-white text-[#27272A] hover:bg-[#F4F4F5] border border-[#E4E4E7]' : 'bg-rose-600 text-white shadow-sm'}`}
               >
                 {micOn ? <Mic className="w-4 h-4" strokeWidth={1.75} /> : <MicOff className="w-4 h-4" strokeWidth={1.75} />}
               </button>
 
               <button 
                 onClick={() => setVideoOn(!videoOn)}
-                className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${videoOn ? 'bg-white text-[#27272A] hover:bg-[#F4F4F5] border border-[#E4E4E7]' : 'bg-rose-600 text-white shadow-sm'}`}
+                aria-label={videoOn ? "Turn off camera" : "Turn on camera"}
+                className={`min-w-[44px] min-h-[44px] w-11 h-11 rounded-lg flex items-center justify-center transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${videoOn ? 'bg-white text-[#27272A] hover:bg-[#F4F4F5] border border-[#E4E4E7]' : 'bg-rose-600 text-white shadow-sm'}`}
               >
                 {videoOn ? <Video className="w-4 h-4" strokeWidth={1.75} /> : <VideoOff className="w-4 h-4" strokeWidth={1.75} />}
               </button>
               
               <div className="w-px h-6 bg-[#E4E4E7] mx-1" />
               
-              <Link href="/clinical/queue" className="w-12 h-9 rounded-lg bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center transition-all shadow-sm">
+              <Link 
+                href="/clinical/queue" 
+                aria-label="End consultation call"
+                className="min-w-[48px] min-h-[44px] w-12 h-11 rounded-lg bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center transition-all shadow-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+              >
                 <PhoneOff className="w-4 h-4" strokeWidth={1.75} />
               </Link>
             </div>

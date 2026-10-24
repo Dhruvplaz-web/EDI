@@ -24,35 +24,6 @@ export interface AcousticAnalysisHook {
 }
 
 // Inline AudioWorklet processor code executed on dedicated audio rendering thread
-const AUDIO_WORKLET_CODE = `
-class AcousticWorkletProcessor extends AudioWorkletProcessor {
-  constructor() {
-    super();
-    this.bufferSize = 2048;
-    this.buffer = new Float32Array(this.bufferSize);
-    this.bufferIndex = 0;
-  }
-
-  process(inputs, outputs, parameters) {
-    const input = inputs[0];
-    if (!input || input.length === 0) return true;
-    const channelData = input[0];
-    if (!channelData) return true;
-
-    for (let i = 0; i < channelData.length; i++) {
-      this.buffer[this.bufferIndex++] = channelData[i];
-      if (this.bufferIndex >= this.bufferSize) {
-        this.port.postMessage(this.buffer.slice());
-        this.bufferIndex = 0;
-      }
-    }
-    return true;
-  }
-}
-
-registerProcessor('acoustic-worklet-processor', AcousticWorkletProcessor);
-`;
-
 export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAnalysisHook {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [pitchHz, setPitchHz] = useState(0);
@@ -101,7 +72,6 @@ export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAn
     }
 
     let isCancelled = false;
-    let workletBlobUrl: string | null = null;
 
     const startAudioProcessing = async () => {
       try {
@@ -167,12 +137,10 @@ export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAn
 
         let workletAttached = false;
 
-        // Attempt modern high-priority AudioWorklet first
+        // Attempt modern high-priority AudioWorklet first via static public script
         if (audioCtx.audioWorklet) {
           try {
-            const blob = new Blob([AUDIO_WORKLET_CODE], { type: 'application/javascript' });
-            workletBlobUrl = URL.createObjectURL(blob);
-            await audioCtx.audioWorklet.addModule(workletBlobUrl);
+            await audioCtx.audioWorklet.addModule('/worklets/acoustic-processor.js');
 
             const workletNode = new AudioWorkletNode(audioCtx, 'acoustic-worklet-processor');
             workletNodeRef.current = workletNode;
@@ -213,9 +181,6 @@ export function useAcousticAnalysis(mediaStream: MediaStream | null): AcousticAn
 
     return () => {
       isCancelled = true;
-      if (workletBlobUrl) {
-        URL.revokeObjectURL(workletBlobUrl);
-      }
       if (sourceNodeRef.current) {
         try { sourceNodeRef.current.disconnect(); } catch {}
       }

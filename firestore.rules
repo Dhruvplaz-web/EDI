@@ -1,70 +1,137 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper function to check user role
-    function isRole(role) {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
     }
-    
-    // Define role-check shortcuts
-    function isPatient() { return isRole('patient'); }
-    function isGuardian() { return isRole('guardian'); }
-    function isMedicalAssistant() { return isRole('medical_assistant'); }
-    function isNurse() { return isRole('nurse'); }
-    function isClinician() { return isRole('clinician'); }
-    function isSpecialist() { return isRole('specialist'); }
-    function isBillingAdmin() { return isRole('billing_admin'); }
-    function isClinicManager() { return isRole('clinic_manager'); }
-    function isITSupport() { return isRole('it_support'); }
-    function isSuperAdmin() { return isRole('super_admin'); }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+
+    function userOrgId() {
+      return getUserData().orgId;
+    }
+
+    function isSuperAdmin() {
+      return isRole('super_admin');
+    }
+
+    function isClinicalStaff() {
+      return isRole('clinician') || isRole('specialist') || isRole('clinical_director') || isRole('nurse');
+    }
+
+    function isPatient() {
+      return isRole('patient');
+    }
+
+    function isOperationsStaff() {
+      return isRole('operations') || isRole('billing_admin') || isRole('clinic_manager') || isRole('it_support');
+    }
 
     // Default deny all
     match /{document=**} {
       allow read, write: if false;
     }
-    
-    // Allow users to read their own profile so they can log in
+
+    // Users collection: user can read their own profile; super admin can manage
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
+      allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'orgId']));
     }
-    
-    // ==========================================
-    // System & Auditing (Phase 3 Enterprise)
-    // ==========================================
-    
+
+    // Multi-tenant organizations
+    match /organizations/{orgId} {
+      allow read: if isAuthenticated() && (userOrgId() == orgId || isSuperAdmin());
+      allow write: if isSuperAdmin();
+    }
+
+    // Patients collection: isolated by orgId
+    match /patients/{patientId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isClinicalStaff() && resource.data.orgId == userOrgId()) ||
+        (isPatient() && patientId == request.auth.uid) ||
+        resource.data.isDemo == true
+      );
+      allow write: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isClinicalStaff() && request.resource.data.orgId == userOrgId())
+      );
+    }
+
+    // Clinical Intakes: IDOR-protected
+    match /intakes/{intakeId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isClinicalStaff() && resource.data.orgId == userOrgId()) ||
+        (isPatient() && resource.data.patientId == request.auth.uid) ||
+        resource.data.isDemo == true
+      );
+      allow create: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isPatient() && request.resource.data.patientId == request.auth.uid) ||
+        (isClinicalStaff() && request.resource.data.orgId == userOrgId())
+      );
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isClinicalStaff() && resource.data.orgId == userOrgId())
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Sessions & Telemetry: isolated by orgId
+    match /sessions/{sessionId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isClinicalStaff() && resource.data.orgId == userOrgId()) ||
+        (isPatient() && resource.data.patientId == request.auth.uid) ||
+        resource.data.isDemo == true
+      );
+      allow write: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isClinicalStaff() && request.resource.data.orgId == userOrgId())
+      );
+    }
+
+    // WebRTC Real-Time Signaling (Audio/Video Consultation Rooms)
+    match /calls/{callId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperAdmin() ||
+        resource == null ||
+        resource.data.clinicianId == request.auth.uid ||
+        resource.data.patientId == request.auth.uid ||
+        request.resource.data.clinicianId == request.auth.uid ||
+        request.resource.data.patientId == request.auth.uid
+      );
+
+      match /offerCandidates/{candidateId} {
+        allow read, write: if isAuthenticated();
+      }
+
+      match /answerCandidates/{candidateId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    // Audit logs: Append-only by authenticated users, readable only by IT/Admins, immutable
     match /audit_logs/{logId} {
-      // Anyone logged in can create an audit log (append-only)
-      allow create: if request.auth != null;
-      // Only IT Support and Super Admins can read the audit logs
-      allow read: if isITSupport() || isSuperAdmin();
-      // No one can ever modify or delete an audit log
+      allow create: if isAuthenticated();
+      allow read: if isSuperAdmin() || isRole('it_support');
       allow update, delete: if false;
     }
-    
+
+    // Emergency break-glass overrides: Non-deletable compliance records
     match /emergency_overrides/{overrideId} {
-      // Clinicians, Specialists, Nurses can trigger break-glass protocols
-      allow create: if isClinician() || isSpecialist() || isNurse();
-      // IT Support and Admins can view the active overrides
-      allow read: if isITSupport() || isSuperAdmin() || isClinician() || isSpecialist() || isNurse();
-      // Cannot delete overrides to maintain compliance
-      allow delete: if false;
-    }
-    
-    // ==========================================
-    // Core Collections (Placeholders)
-    // ==========================================
-    
-    // match /invoices/{invoiceId} {
-    //   // TODO: Add billing access rules
-    // }
-    
-    // match /appointments/{appointmentId} {
-    //   // TODO: Add scheduling access rules
-    // }
-    
-    match /intakes/{intakeId} {
-      allow read, write: if isClinician() || isPatient();
+      allow create: if isClinicalStaff();
+      allow read: if isClinicalStaff() || isOperationsStaff() || isSuperAdmin();
+      allow update, delete: if false;
     }
   }
 }

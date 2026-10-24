@@ -106,14 +106,37 @@ export class ClinicalLinguisticAnalyzer {
     let manicScore = 0;
     let positiveCount = 0;
 
-    const NEGATIONS = ['not', "don't", 'no', 'never', 'hardly', 'barely', 'without', 'denies', 'stopped', 'none'];
+    const NEGATIONS = [
+      'not', "don't", "didn't", "won't", "wouldn't", 'no', 'never', 
+      'hardly', 'barely', 'without', 'denies', 'stopped', 'none', 
+      "haven't", "cannot", "can't", "am not", "do not"
+    ];
 
     const isNegated = (targetPhrase: string): boolean => {
       const idx = lower.indexOf(targetPhrase);
       if (idx === -1) return false;
-      const precedingText = lower.slice(Math.max(0, idx - 30), idx);
-      const precedingWords = precedingText.trim().split(/\s+/).slice(-3);
-      return precedingWords.some(w => NEGATIONS.includes(w.replace(/[^a-z']/g, '')));
+
+      // Extract preceding text up to 80 chars, but stop at earlier sentence terminals
+      const rawPreceding = lower.slice(Math.max(0, idx - 80), idx);
+      const clauseBreakIdx = Math.max(
+        rawPreceding.lastIndexOf('.'),
+        rawPreceding.lastIndexOf('!'),
+        rawPreceding.lastIndexOf('?'),
+        rawPreceding.lastIndexOf(';')
+      );
+
+      const clauseText = clauseBreakIdx !== -1 
+        ? rawPreceding.slice(clauseBreakIdx + 1) 
+        : rawPreceding;
+
+      const precedingTokens = clauseText
+        .trim()
+        .split(/\s+/)
+        .map(w => w.replace(/[^a-z']/g, ''))
+        .filter(Boolean)
+        .slice(-6); // Check up to 6 tokens within the same clause
+
+      return precedingTokens.some(w => NEGATIONS.includes(w));
     };
 
     for (const [phrase, meta] of Object.entries(CRISIS_LEXICON)) {
@@ -234,3 +257,5 @@ export class ClinicalLinguisticAnalyzer {
     };
   }
 }
+
+export { ClinicalLinguisticAnalyzer as LinguisticSentimentAnalyzer };

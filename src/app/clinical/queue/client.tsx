@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   Users, ChevronDown, ChevronUp, BrainCircuit, UserCheck, Video, 
-  FileText, TrendingUp, Sliders, Download, AlertTriangle, ShieldCheck, Activity 
+  FileText, TrendingUp, Sliders, Download, AlertTriangle, ShieldCheck, Activity, CheckCircle2 
 } from "lucide-react"
 import { collection, query, orderBy, onSnapshot, doc, runTransaction } from "firebase/firestore"
 import { db } from "@/lib/firebase/client"
@@ -329,6 +329,16 @@ export function TriageBoardClient({ role, canWriteNotes }: { role: string | unde
             {[1, 2, 3].map(i => (
               <div key={i} className="h-24 bg-white border border-[#E4E4E7] rounded-xl animate-pulse shadow-sm" />
             ))}
+          </div>
+        ) : queue.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-[#E4E4E7] rounded-xl bg-white/50 space-y-3">
+            <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-[#09090B]">All Patients Triaged</h3>
+            <p className="text-xs text-[#71717A] max-w-sm">
+              There are currently no waiting patients in this clinic queue. New intakes will appear here automatically in real time.
+            </p>
           </div>
         ) : (
           <div className="grid gap-3">

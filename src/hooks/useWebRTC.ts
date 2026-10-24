@@ -2,23 +2,28 @@ import { useEffect, useRef, useState } from 'react';
 import { db } from '@/lib/firebase/client';
 import { collection, doc, setDoc, onSnapshot, updateDoc, addDoc } from 'firebase/firestore';
 
-const turnServerUrl = process.env.NEXT_PUBLIC_TURN_SERVER_URL || 'relay.metered.ca:443';
-const turnUsername = process.env.NEXT_PUBLIC_TURN_USERNAME || 'open-source-telehealth';
-const turnCredential = process.env.NEXT_PUBLIC_TURN_CREDENTIAL || 'telehealth-secret';
+const turnServerUrl = process.env.NEXT_PUBLIC_TURN_SERVER_URL;
+const turnUsername = process.env.NEXT_PUBLIC_TURN_USERNAME;
+const turnCredential = process.env.NEXT_PUBLIC_TURN_CREDENTIAL;
+
+const iceServers: RTCIceServer[] = [
+  { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }
+];
+
+if (turnServerUrl && turnUsername && turnCredential) {
+  iceServers.push({
+    urls: [
+      `turn:${turnServerUrl}?transport=udp`,
+      `turn:${turnServerUrl}?transport=tcp`,
+      `turns:${turnServerUrl}?transport=tcp`
+    ],
+    username: turnUsername,
+    credential: turnCredential
+  });
+}
 
 const iceServersConfig: RTCConfiguration = {
-  iceServers: [
-    { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] },
-    {
-      urls: [
-        `turn:${turnServerUrl}?transport=udp`,
-        `turn:${turnServerUrl}?transport=tcp`,
-        `turns:${turnServerUrl}?transport=tcp`
-      ],
-      username: turnUsername,
-      credential: turnCredential
-    }
-  ],
+  iceServers,
   iceCandidatePoolSize: 10,
 };
 

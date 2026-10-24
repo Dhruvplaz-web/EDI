@@ -61,8 +61,9 @@ export class CrossAttentionFusionEngine {
   private maskingSustainStartMs: number | null = null;
   private maskingSustainRequiredMs: number = 10000; // 10 seconds continuous sustained discrepancy
 
-  // Learned/Calibrated Orthogonal Projection Weights W_Q, W_K, W_V
-  // Trained on multimodal affective computing benchmarks (DAIC-WOZ / AVEC)
+  // Deterministic Orthogonal Projection Weights W_Q, W_K, W_V
+  // Calibrated to align normalized facial kinematic and acoustic feature variances with published clinical ranges
+  // (Deterministic heuristic baseline; formal prospective clinical validation pending)
   private W_Q: number[][] = [
     [0.45, 0.12, 0.05, 0.38],
     [0.18, 0.62, 0.31, 0.15],
