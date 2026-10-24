@@ -1,7 +1,7 @@
 # Praxis AI / EDI — Project Handoff Summary
 **Document Version:** 1.0.0 (Production Handoff)  
 **Target Audience:** External Technical Reviewer, Security Auditor, Regulatory Counsel  
-**Latest Git Commit Hash:** `f00c8868a32b96a4f06ffb836ffab74832dd477e`  
+**Latest Git Commit Hash:** `feae70d58ee940982627ffff6e04d9b9d18f63d8`  
 **Git Branch:** `main`  
 **Date:** October 24, 2026  
 **Auditor Principle:** Code is the single source of truth. Every statement reflects verified code in the repository.
