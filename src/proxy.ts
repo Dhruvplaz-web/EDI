@@ -42,10 +42,16 @@ const PUBLIC_PATHS = [
   '/privacy',
   '/terms',
   '/compliance',
+  '/crisis',
+  '/subprocessors',
+  '/troubleshoot/network',
   '/patient/intake',
   '/pricing',
   '/api/health',
   '/api/stripe/webhook',
+  '/api/razorpay/webhook',
+  '/api/dpdp/consent',
+  '/api/dpdp/rights',
   '/api/dev-login', // dev-login internally rejects in production
 ];
 
@@ -70,12 +76,12 @@ export function getSafeRedirectUrl(rawRedirect: string | null, fallback: string)
  * - 'wasm-unsafe-eval' preserved exclusively for MediaPipe WASM and AudioWorklet DSP
  * - No 'unsafe-eval' in production
  * - style-src retains 'unsafe-inline' for Next.js dynamic CSS prop hydration
- * - Exact connect-src hosts only (Firestore, Auth, Token, Stripe); zero wildcards; zero consumer Gemini
+ * - Exact connect-src hosts only (Firestore, Auth, Token, Stripe, Razorpay); zero wildcards; zero consumer Gemini
  */
 export function buildCspHeader(nonce: string, isDev: boolean = false): string {
   const scriptDirectives = isDev
-    ? `'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://js.stripe.com https://challenges.cloudflare.com https://apis.google.com`
-    : `'self' 'nonce-${nonce}' 'wasm-unsafe-eval' https://js.stripe.com https://challenges.cloudflare.com https://apis.google.com`;
+    ? `'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://js.stripe.com https://checkout.razorpay.com https://challenges.cloudflare.com https://apis.google.com`
+    : `'self' 'nonce-${nonce}' 'wasm-unsafe-eval' https://js.stripe.com https://checkout.razorpay.com https://challenges.cloudflare.com https://apis.google.com`;
 
   const emulatorConnect = (isDev || process.env.NEXT_PUBLIC_FIREBASE_EMULATOR === 'true')
     ? " http://127.0.0.1:8080 http://127.0.0.1:9099 http://localhost:8080 http://localhost:9099 ws://127.0.0.1:8080"
@@ -88,9 +94,9 @@ export function buildCspHeader(nonce: string, isDev: boolean = false): string {
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob:",
     "media-src 'self' blob:",
-    `connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.stripe.com https://challenges.cloudflare.com${emulatorConnect}`,
+    `connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.stripe.com https://api.razorpay.com https://lumberjack.razorpay.com https://challenges.cloudflare.com${emulatorConnect}`,
     "worker-src 'self' blob:",
-    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com https://apis.google.com https://praxis-ai-cdc46.firebaseapp.com",
+    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://api.razorpay.com https://checkout.razorpay.com https://challenges.cloudflare.com https://apis.google.com https://praxis-ai-cdc46.firebaseapp.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

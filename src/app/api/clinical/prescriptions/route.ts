@@ -57,9 +57,13 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal server error';
-    const status = message.includes('UNAUTHORIZED_FOR_PSYCHOLOGISTS') || message.includes('PROHIBITED')
-      ? 403
-      : 400;
+    const status = 
+      message.includes('UNAUTHORIZED_FOR_PSYCHOLOGISTS') || 
+      message.includes('PROHIBITED') ||
+      message.includes('PRACTITIONER_NOT_VERIFIED') ||
+      message.includes('PRACTITIONER_PROFILE_NOT_FOUND')
+        ? 403
+        : 400;
 
     return NextResponse.json({ error: message }, { status });
   }

@@ -1,11 +1,8 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
 import { Wifi, PhoneCall, ArrowLeft, RefreshCw, AlertCircle, Signal } from 'lucide-react';
-
-export const metadata = {
-  title: 'Network & Video Call Troubleshooting | Praxis AI',
-  description: 'Plain-language tips for weak internet connections, audio-only switching, and bandwidth optimization in India.',
-};
 
 export default function NetworkTroubleshootPage() {
   return (

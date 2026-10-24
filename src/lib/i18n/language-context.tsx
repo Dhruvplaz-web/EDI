@@ -70,17 +70,15 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('en');
-
-  // Restore stored language preference from localStorage if available
-  useEffect(() => {
+  const [language, setLanguageState] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('praxis_lang') as Language | null;
       if (stored && ['en', 'hi', 'mr'].includes(stored)) {
-        setLanguageState(stored);
+        return stored;
       }
     }
-  }, []);
+    return 'en';
+  });
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);

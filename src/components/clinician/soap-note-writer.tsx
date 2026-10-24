@@ -76,22 +76,21 @@ export function SOAPNoteWriter({
       .trim();
   }
 
-  const [soap, setSoap] = useState(baselineDraft);
+  const [soap, setSoap] = useState(() => {
+    if (patientId) {
+      const loaded = loadSoapDraft(patientId);
+      if (loaded && (loaded.subjective || loaded.objective || loaded.assessment || loaded.plan)) {
+        return loaded as typeof baselineDraft;
+      }
+    }
+    return baselineDraft;
+  });
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [saveAsResearch, setSaveAsResearch] = useState(isResearchMode);
   const [scribeBadge, setScribeBadge] = useState<string | null>(null);
   const [consentError, setConsentError] = useState<string | null>(null);
-
-  // Restore autosaved draft from secure ephemeral sessionStorage if present
-  useEffect(() => {
-    if (!patientId) return;
-    const loaded = loadSoapDraft(patientId);
-    if (loaded && (loaded.subjective || loaded.objective || loaded.assessment || loaded.plan)) {
-      setSoap(loaded as typeof baselineDraft);
-    }
-  }, [patientId]);
 
   // Autosave draft to sessionStorage on change
   useEffect(() => {
@@ -186,7 +185,7 @@ Generated with Praxis AI Clinical Documentation. Designed to support Registered 
     }
 
     // Cleanse objective note if saving as official record without research protocol
-    let finalSoap = { ...soap };
+    const finalSoap = { ...soap };
     if (!saveAsResearch) {
       finalSoap.objective = finalSoap.objective
         .replace(/Acoustic Jitter.*$/gm, '')

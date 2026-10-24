@@ -38,7 +38,7 @@ export default function OperationsBillingPage() {
       if (!res.ok) throw new Error(data.error || "Checkout failed");
 
       if (data.url) {
-        window.location.href = data.url;
+        window.location.assign(data.url);
       } else {
         toast.success(`Plan updated to ${SAAS_PLANS[targetTier].name} in sandbox mode`);
         setCurrentTier(targetTier);

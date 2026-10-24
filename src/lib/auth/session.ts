@@ -196,6 +196,7 @@ export async function createSignedSessionToken(
     orgId: string;
     lastActive?: number;
     sessionVersion?: number;
+    env?: 'development' | 'test' | 'production';
   },
   expiresInSeconds: number = 60 * 60 * 8 // 8 hours default
 ): Promise<string> {
@@ -210,7 +211,7 @@ export async function createSignedSessionToken(
     role: payload.role,
     orgId: payload.orgId,
     iss: 'praxis-ai-platform',
-    env: (process.env.NODE_ENV as 'development' | 'test' | 'production') || 'development',
+    env: payload.env || (process.env.NODE_ENV as 'development' | 'test' | 'production') || 'development',
     iat: now,
     exp: now + clampedLifetime,
     lastActive: payload.lastActive ?? now,
