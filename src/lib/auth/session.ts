@@ -62,7 +62,7 @@ export async function createSignedSessionToken(
 
   const key = await crypto.subtle.importKey(
     'raw',
-    getAuthSecret(),
+    getAuthSecret() as unknown as BufferSource,
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
@@ -71,7 +71,7 @@ export async function createSignedSessionToken(
   const signature = await crypto.subtle.sign(
     'HMAC',
     key,
-    new TextEncoder().encode(payloadB64)
+    new TextEncoder().encode(payloadB64) as unknown as BufferSource
   );
 
   const signatureB64 = base64UrlEncode(signature);
@@ -97,7 +97,7 @@ export async function verifySignedSessionToken(token: string | undefined): Promi
   try {
     const key = await crypto.subtle.importKey(
       'raw',
-      getAuthSecret(),
+      getAuthSecret() as unknown as BufferSource,
       { name: 'HMAC', hash: 'SHA-256' },
       false,
       ['verify']
@@ -109,8 +109,8 @@ export async function verifySignedSessionToken(token: string | undefined): Promi
     const isValid = await crypto.subtle.verify(
       'HMAC',
       key,
-      signatureBytes,
-      dataBytes
+      signatureBytes as unknown as BufferSource,
+      dataBytes as unknown as BufferSource
     );
 
     if (!isValid) {

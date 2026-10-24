@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { POST as webhookPOST, processedWebhookEventIds } from '@/app/api/stripe/webhook/route';
 import { POST as checkoutPOST } from '@/app/api/stripe/checkout/route';
 import { stripe } from '@/lib/stripe/client';
+import Stripe from 'stripe';
 import { createSignedSessionToken } from '@/lib/auth/session';
 
 let currentMockCookies: Record<string, string> = {};
