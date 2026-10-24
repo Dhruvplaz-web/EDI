@@ -2,28 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { db } from '@/lib/firebase/client';
 import { collection, doc, setDoc, onSnapshot, updateDoc, addDoc } from 'firebase/firestore';
 
-const turnServerUrl = process.env.NEXT_PUBLIC_TURN_SERVER_URL;
-const turnUsername = process.env.NEXT_PUBLIC_TURN_USERNAME;
-const turnCredential = process.env.NEXT_PUBLIC_TURN_CREDENTIAL;
-
-const iceServers: RTCIceServer[] = [
-  { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }
-];
-
-if (turnServerUrl && turnUsername && turnCredential) {
-  iceServers.push({
-    urls: [
-      `turn:${turnServerUrl}?transport=udp`,
-      `turn:${turnServerUrl}?transport=tcp`,
-      `turns:${turnServerUrl}?transport=tcp`
-    ],
-    username: turnUsername,
-    credential: turnCredential
-  });
-}
-
-const iceServersConfig: RTCConfiguration = {
-  iceServers,
+const defaultIceServersConfig: RTCConfiguration = {
+  iceServers: [
+    { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }
+  ],
   iceCandidatePoolSize: 10,
 };
 
@@ -48,7 +30,23 @@ export function useWebRTC(callId: string | undefined, role: 'clinician' | 'patie
           console.warn("WebRTC requires secure context (HTTPS) for hardware media access.");
         }
 
-        pc.current = new RTCPeerConnection(iceServersConfig);
+        let activeIceConfig = defaultIceServersConfig;
+        try {
+          const iceRes = await fetch('/api/webrtc/ice');
+          if (iceRes.ok) {
+            const iceData = await iceRes.json();
+            if (iceData?.iceServers) {
+              activeIceConfig = {
+                iceServers: iceData.iceServers,
+                iceCandidatePoolSize: iceData.iceCandidatePoolSize || 10,
+              };
+            }
+          }
+        } catch (iceErr) {
+          console.warn('ICE server fetch failed, falling back to default STUN:', iceErr);
+        }
+
+        pc.current = new RTCPeerConnection(activeIceConfig);
 
         pc.current.onconnectionstatechange = () => {
           if (pc.current) {

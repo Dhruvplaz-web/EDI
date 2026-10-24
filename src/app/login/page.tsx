@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase/client'
 import { createSession } from '@/app/actions/auth'
+import { purgeAllSoapDraftsOnLogoutOrIdle } from '@/lib/clinical/soap-draft-storage'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,6 +17,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  // Ensure any clinical drafts are completely purged when landing on the login page
+  useEffect(() => {
+    purgeAllSoapDraftsOnLogoutOrIdle();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,7 +47,7 @@ export default function LoginPage() {
       }
 
       const idToken = await user.getIdToken()
-      const sessionResult = await createSession(idToken, role)
+      const sessionResult = await createSession(idToken)
 
       if (!sessionResult.success) {
         throw new Error('Failed to create secure session')

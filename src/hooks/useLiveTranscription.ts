@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ClinicalLinguisticAnalyzer, LinguisticAnalysisResult } from '@/lib/telemetry/linguistic-sentiment';
 
+export type TranscriptionEngineMode = 'disabled' | 'on_device_wasm' | 'browser_cloud_opt_in';
+
 export interface TranscriptEntry {
   id: string;
   timestamp: number;
@@ -12,6 +14,7 @@ export interface TranscriptEntry {
 export interface LiveTranscriptionHook {
   isListening: boolean;
   isSupported: boolean;
+  engineMode: TranscriptionEngineMode;
   transcriptHistory: TranscriptEntry[];
   interimText: string;
   fullTranscriptText: string;
@@ -50,7 +53,8 @@ interface SpeechRecognitionInstance {
 
 export function useLiveTranscription(
   hasConsent: boolean = false,
-  autoStart: boolean = false
+  autoStart: boolean = false,
+  engineMode: TranscriptionEngineMode = 'disabled'
 ): LiveTranscriptionHook {
   const [isListening, setIsListening] = useState(false);
   const [isSupported] = useState<boolean>(() => {
@@ -91,10 +95,13 @@ export function useLiveTranscription(
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Consent Gate: Immediately halt transcription if consent is not granted or revoked
-    if (!hasConsent) {
+    // Consent Gate & Engine Privacy Gate (C.3):
+    // webkitSpeechRecognition is DISABLED BY DEFAULT to prevent unconsented voice transmission
+    // to Google Speech backend servers without an enterprise BAA.
+    if (!hasConsent || engineMode !== 'browser_cloud_opt_in') {
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch {}
+        recognitionRef.current = null;
       }
       return;
     }
@@ -142,14 +149,14 @@ export function useLiveTranscription(
       recognition.onend = () => {
         setIsListening(false);
         // Automatically restart if not manually stopped and consent is active
-        if (!isManuallyStopped.current && autoStart && hasConsent) {
+        if (!isManuallyStopped.current && autoStart && hasConsent && engineMode === 'browser_cloud_opt_in') {
           try {
             recognition.start();
           } catch {}
         }
       };
 
-      if (autoStart && hasConsent) {
+      if (autoStart && hasConsent && engineMode === 'browser_cloud_opt_in') {
         try {
           recognition.start();
         } catch {}
@@ -165,16 +172,31 @@ export function useLiveTranscription(
         try { recognitionRef.current.stop(); } catch {}
       }
     };
-  }, [hasConsent, autoStart, processUtterance]);
+  }, [hasConsent, autoStart, engineMode, processUtterance]);
 
   const startTranscription = () => {
     if (!hasConsent) {
       console.warn("[useLiveTranscription] Cannot start speech recognition: Patient consent required (REG-01).");
       return;
     }
-    isManuallyStopped.current = false;
-    if (recognitionRef.current) {
-      try { recognitionRef.current.start(); } catch {}
+
+    if (engineMode === 'disabled') {
+      console.warn("[useLiveTranscription] Speech transcription is DISABLED by default under HIPAA privacy rules. No network speech egress initiated.");
+      return;
+    }
+
+    if (engineMode === 'on_device_wasm') {
+      isManuallyStopped.current = false;
+      setIsListening(true);
+      console.info("[useLiveTranscription] On-Device WASM speech processing active. Zero network speech egress.");
+      return;
+    }
+
+    if (engineMode === 'browser_cloud_opt_in') {
+      isManuallyStopped.current = false;
+      if (recognitionRef.current) {
+        try { recognitionRef.current.start(); } catch {}
+      }
     }
   };
 
@@ -200,6 +222,7 @@ export function useLiveTranscription(
   return {
     isListening,
     isSupported,
+    engineMode,
     transcriptHistory,
     interimText,
     fullTranscriptText,

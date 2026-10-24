@@ -7,6 +7,7 @@ import {
   ChevronRight, Bell, CheckCircle2, ChevronDown 
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/language-context';
+import { purgeAllSoapDraftsOnLogoutOrIdle } from '@/lib/clinical/soap-draft-storage';
 
 export interface NavItem {
   id: string;
@@ -251,7 +252,11 @@ export function SidebarLayout({
               >
                 <Settings className="w-3.5 h-3.5 mr-1 text-[#71717A]" strokeWidth={1.75} /> Settings
               </button>
-              <Link href="/api/logout" className="text-xs font-medium text-[#DC2626] hover:underline flex items-center">
+              <Link 
+                href="/api/logout" 
+                onClick={() => purgeAllSoapDraftsOnLogoutOrIdle()} 
+                className="text-xs font-medium text-[#DC2626] hover:underline flex items-center"
+              >
                 <LogOut className="w-3.5 h-3.5 mr-1" strokeWidth={1.75} /> Sign Out
               </Link>
             </div>

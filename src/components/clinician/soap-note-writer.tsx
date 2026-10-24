@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FileText, Check, Copy, Sparkles, Loader2, Save, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClinicalSignalEngine } from '@/lib/telemetry/signal-engine';
 import { logComplianceAudit } from '@/lib/telemetry/audit-trail-logger';
+import { saveSoapDraft, loadSoapDraft, clearSoapDraft } from '@/lib/clinical/soap-draft-storage';
 
 interface SOAPNoteWriterProps {
   patientName: string;
@@ -68,6 +69,21 @@ export function SOAPNoteWriter({
   const [isSaved, setIsSaved] = useState(false);
   const [scribeBadge, setScribeBadge] = useState<string | null>(null);
   const [consentError, setConsentError] = useState<string | null>(null);
+
+  // Restore autosaved draft from secure ephemeral sessionStorage if present
+  useEffect(() => {
+    if (!patientId) return;
+    const loaded = loadSoapDraft(patientId);
+    if (loaded && (loaded.subjective || loaded.objective || loaded.assessment || loaded.plan)) {
+      setSoap(loaded as typeof baselineDraft);
+    }
+  }, [patientId]);
+
+  // Autosave draft to sessionStorage on change
+  useEffect(() => {
+    if (!patientId) return;
+    saveSoapDraft(patientId, soap);
+  }, [soap, patientId]);
 
   const handleGenerateAISoap = async () => {
     setIsGenerating(true);
@@ -148,6 +164,9 @@ Generated with Praxis AI Multimodal Clinical Decision Support.`;
 
   const handleSaveAndSign = () => {
     setIsSaved(true);
+    if (patientId) {
+      clearSoapDraft(patientId);
+    }
     logComplianceAudit({
       userId: 'dr_jenkins_84920',
       userRole: 'clinician',
