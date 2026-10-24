@@ -4,7 +4,8 @@ import { createSignedSessionToken } from "@/lib/auth/session";
 
 export async function GET(request: Request) {
   // CRITICAL SECURITY GATE: dev-login must NEVER be accessible in production builds
-  if (process.env.NODE_ENV === "production") {
+  // AND requires explicit ENABLE_DEV_LOGIN=true in development
+  if (process.env.NODE_ENV === "production" || process.env.ENABLE_DEV_LOGIN !== "true") {
     return new NextResponse(null, { status: 404 });
   }
 
@@ -18,6 +19,11 @@ export async function GET(request: Request) {
     "clinic_manager",
     "super_admin",
     "it_support",
+    "nurse",
+    "specialist",
+    "guardian",
+    "medical_assistant",
+    "operations",
   ];
 
   if (!validRoles.includes(role)) {
@@ -34,23 +40,13 @@ export async function GET(request: Request) {
     orgId: "org_praxis_demo",
   });
 
-  // Set hardened session cookies
+  // Set hardened session cookie (A.4: user_role cookie completely removed)
   cookieStore.set("session", token, {
     path: "/",
     httpOnly: true,
     secure: isSecure,
     sameSite: "lax",
     maxAge: 60 * 60 * 8,
-  });
-
-  // Also set non-critical user_role cookie for client UI convenience only
-  // (Proxy and APIs NEVER trust this cookie; they verify 'session' HMAC signature)
-  cookieStore.set("user_role", role, {
-    path: "/",
-    httpOnly: true,
-    secure: isSecure,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 8, // 8 hours
   });
 
   const dashboardMap: Record<string, string> = {

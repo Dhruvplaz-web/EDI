@@ -52,6 +52,35 @@ describe('SEC-03: Cryptographic Session Signature & Forged Cookie Protection', (
       }
     );
 
+    it.each([
+      '/clinical/consult/x.png',
+      '/patient/consult/x.jpg',
+      '/clinical/records/x.svg',
+    ])('rejects unauthenticated request to %s and redirects to /login (no extension-based bypass)', async (bypassPath) => {
+      const req = new NextRequest(`https://praxis-ai.health${bypassPath}`);
+      const res = await proxy(req);
+
+      expect(res.status).toBe(307);
+      const location = res.headers.get('location');
+      expect(location).toContain('/login');
+      expect(location).toContain(`redirect=${encodeURIComponent(bypassPath)}`);
+    });
+
+    it('Part F: allows unauthenticated access to explicitly allowlisted /assets/logo.svg and /favicon.ico', async () => {
+      const reqAsset = new NextRequest('https://praxis-ai.health/assets/logo.svg');
+      const resAsset = await proxy(reqAsset);
+      expect(resAsset.status).toBe(200);
+
+      const reqFavicon = new NextRequest('https://praxis-ai.health/favicon.ico');
+      const resFavicon = await proxy(reqFavicon);
+      expect(resFavicon.status).toBe(200);
+
+      // Verify dynamic nonce-based CSP header is present
+      const csp = resAsset.headers.get('Content-Security-Policy');
+      expect(csp).toContain("script-src 'self' 'nonce-");
+      expect(csp).toContain("connect-src 'self' https://firestore.googleapis.com");
+    });
+
     it('rejects forged user_role=super_admin on protected clinical API and returns 401 Unauthorized', async () => {
       const req = new NextRequest('https://praxis-ai.health/api/clinical/generate-soap', {
         headers: {
@@ -79,11 +108,67 @@ describe('SEC-03: Cryptographic Session Signature & Forged Cookie Protection', (
       });
 
       const res = await proxy(req);
-      // Next response passes through (200) with forwarded verified headers
+      // Next response passes through (200) without leaking verified headers back to client (A.4)
       expect(res.status).toBe(200);
-      expect(res.headers.get('x-verified-uid')).toBe('dr_verified_123');
-      expect(res.headers.get('x-verified-role')).toBe('clinician');
-      expect(res.headers.get('x-verified-org')).toBe('org_verified_health');
+      expect(res.headers.get('x-verified-uid')).toBeNull();
+      expect(res.headers.get('x-verified-role')).toBeNull();
+      expect(res.headers.get('x-verified-org')).toBeNull();
+    });
+
+    it('strips incoming forged x-verified-* headers on every request', async () => {
+      const req = new NextRequest('https://praxis-ai.health/api/health', {
+        headers: {
+          'x-verified-uid': 'attacker_uid',
+          'x-verified-role': 'super_admin',
+          'x-verified-org': 'attacker_org',
+        },
+      });
+
+      const res = await proxy(req);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('x-verified-uid')).toBeNull();
+      expect(res.headers.get('x-verified-role')).toBeNull();
+    });
+
+    it('sanitizes ?redirect= parameter preventing open redirects', async () => {
+      const validToken = await createSignedSessionToken({
+        uid: 'dr_verified_123',
+        role: 'clinician',
+        orgId: 'org_verified_health',
+      });
+
+      // Malicious protocol-relative open redirect
+      const req = new NextRequest('https://praxis-ai.health/login?redirect=//evil.com', {
+        headers: {
+          cookie: `session=${validToken}`,
+        },
+      });
+
+      const res = await proxy(req);
+      expect(res.status).toBe(307);
+      const location = res.headers.get('location');
+      // Should redirect to default dashboard /clinical/queue, NEVER //evil.com
+      expect(location).toContain('/clinical/queue');
+      expect(location).not.toContain('//evil.com');
+    });
+
+    it('gates /api/stripe/checkout strictly to billing administrators', async () => {
+      const clinicianToken = await createSignedSessionToken({
+        uid: 'dr_verified_123',
+        role: 'clinician', // Not billing admin
+        orgId: 'org_verified_health',
+      });
+
+      const req = new NextRequest('https://praxis-ai.health/api/stripe/checkout', {
+        headers: {
+          cookie: `session=${clinicianToken}`,
+        },
+      });
+
+      const res = await proxy(req);
+      expect(res.status).toBe(403);
+      const data = await res.json();
+      expect(data.error).toContain('Billing administrative role required');
     });
   });
 
