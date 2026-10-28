@@ -10,6 +10,23 @@ jobs:
   verify:
     name: Lint, Typecheck, Unit Tests & Production Build
     runs-on: ubuntu-latest
+    env:
+      DATA_RESIDENCY_REGION: asia-south1
+      DATA_RESIDENCY_OVERRIDE: "false"
+      AUTH_SECRET: "praxis_dev_secret_key_change_in_production_32bytes!!"
+      NEXT_PUBLIC_FIREBASE_API_KEY: "AIzaSy_demo_key"
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "praxis-ai-cdc46.firebaseapp.com"
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: "praxis-ai-cdc46"
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: "praxis-ai-cdc46.firebasestorage.app"
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "303109364197"
+      NEXT_PUBLIC_FIREBASE_APP_ID: "1:303109364197:web:34b5a4b6f9fabdd22db70c"
+      FIREBASE_PROJECT_ID: "praxis-ai-cdc46"
+      FIREBASE_CLIENT_EMAIL: "firebase-adminsdk@praxis-ai-cdc46.iam.gserviceaccount.com"
+      FIREBASE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQClbDK7BVbPcdGW\n-----END PRIVATE KEY-----\n"
+      NEXT_PUBLIC_RAZORPAY_KEY_ID: "rzp_test_placeholder"
+      RAZORPAY_KEY_SECRET: "placeholder_secret"
+      RAZORPAY_WEBHOOK_SECRET: "placeholder_webhook_secret"
+      RESEARCH_MODE_ENABLED: "false"
 
     steps:
       - name: Checkout Code
@@ -19,10 +36,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Install Dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Static Type Check (tsc)
         run: npx tsc --noEmit
