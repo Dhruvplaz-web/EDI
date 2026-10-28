@@ -31,7 +31,7 @@ describe('Item 1: createSession Custom Claims & Universal Staff MFA Verification
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + 3600,
       firebase: { identities: {}, sign_in_provider: 'password' },
-    } as any);
+    } as unknown as import('firebase-admin/auth').DecodedIdToken);
 
     const result = await createSession('valid_id_token_no_claims', 'super_admin');
     expect(result.success).toBe(false);
@@ -50,7 +50,7 @@ describe('Item 1: createSession Custom Claims & Universal Staff MFA Verification
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + 3600,
       firebase: { identities: {}, sign_in_provider: 'password' },
-    } as any);
+    } as unknown as import('firebase-admin/auth').DecodedIdToken);
 
     const result = await createSession('valid_id_token_no_org');
     expect(result.success).toBe(false);
@@ -70,7 +70,7 @@ describe('Item 1: createSession Custom Claims & Universal Staff MFA Verification
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + 3600,
       firebase: { identities: {}, sign_in_provider: 'password' }, // No sign_in_second_factor
-    } as any);
+    } as unknown as import('firebase-admin/auth').DecodedIdToken);
 
     const result = await createSession('valid_nurse_token');
     expect(result.success).toBe(false);
@@ -91,7 +91,7 @@ describe('Item 1: createSession Custom Claims & Universal Staff MFA Verification
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 3600,
         firebase: { identities: {}, sign_in_provider: 'password' },
-      } as any);
+      } as unknown as import('firebase-admin/auth').DecodedIdToken);
 
       const result = await createSession(`token_${staffRole}`);
       expect(result.success).toBe(false);
@@ -115,7 +115,7 @@ describe('Item 1: createSession Custom Claims & Universal Staff MFA Verification
         sign_in_provider: 'password',
         sign_in_second_factor: 'totp',
       },
-    } as any);
+    } as unknown as import('firebase-admin/auth').DecodedIdToken);
 
     const result = await createSession('valid_nurse_token_with_mfa');
     expect(result.success).toBe(true);
