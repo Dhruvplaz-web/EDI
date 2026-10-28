@@ -47,7 +47,7 @@ jobs:
         run: npm run lint -- --max-warnings=20
 
       - name: Run Vitest Unit & Integration Tests
-        run: npm test
+        run: npx vitest run tests/unit tests/integration
 
       - name: Next.js Production Build
         run: npm run build
